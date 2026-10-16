@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pantry - VitaPlate</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css"><link rel="stylesheet" href="css/pantry.css"></head>
+<body class="pantry" data-page="pantry.html" data-title="Pantry">
+<div class="main"><main class="content">
+  <section class="hero">
+    <div><h1>What's in your pantry?</h1><p>Add what you have and set your diet. VitaPlate finds recipes you can cook right now.</p>
+      <a class="btn btn-lime" href="recipes.html">Find recipes</a></div>
+    <div class="tiles"><div class="tile"><b id="sItems">0</b><span>Items</span></div><div class="tile"><b id="sSoon">0</b><span>Use soon</span></div><div class="tile"><b id="sDiet">0</b><span>Diet filters</span></div></div>
+  </section>
+  <div class="layout">
+    <div class="grid">
+      <section class="card"><div class="card-head"><h2>Add an item</h2></div>
+        <form id="addForm" class="form-grid">
+          <label class="field full">Name<input class="input" id="name" required placeholder="e.g. Red onions"></label>
+          <label class="field">Category<select class="input" id="cat"></select></label>
+          <label class="field">Expiry date<input class="input" id="exp" type="date"></label>
+          <label class="field">Amount<input class="input" id="qty" type="number" min="1" value="1"></label>
+          <label class="field">Unit<select class="input" id="unit"><option>pcs</option><option>g</option><option>kg</option><option>ml</option><option>l</option><option>cups</option></select></label>
+          <button class="btn btn-primary full" type="submit">Add to pantry</button>
+        </form>
+        <p class="muted" style="margin:14px 0 4px;font-size:.85rem">Quick add</p><div class="quick" id="quick"></div>
+      </section>
+      <section class="card"><div class="card-head"><h2>Dietary restrictions</h2></div><div class="diet" id="diets"></div></section>
+    </div>
+    <section>
+      <div class="toolbar"><input class="input" id="filter" type="search" placeholder="Filter your pantry" aria-label="Filter pantry" style="max-width:280px"><button class="btn btn-ghost btn-sm" id="clear" style="margin-left:auto">Clear all</button></div>
+      <div id="groups"></div>
+    </section>
+  </div>
+</main></div>
+<script src="js/data.js"></script><script src="js/app.js"></script><script src="js/pantry.js"></script>
+</body></html>
