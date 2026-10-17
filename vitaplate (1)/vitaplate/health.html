@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Health & BMI - VitaPlate</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css"><link rel="stylesheet" href="css/theme.css"></head>
+<body data-page="health.html" data-title="Health & BMI">
+<div class="main"><main class="content">
+<section class="hero"><div><h1>Know your numbers</h1><p>Check your BMI and see how far you are from your target weight.</p></div><div class="cast" id="cast"></div></section>
+<section class="card" style="max-width:560px"><div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><label class="field">Height (cm)<input class="input" id="h" type="number" min="100" max="230"></label><label class="field">Weight (kg)<input class="input" id="w" type="number" min="25" max="250"></label><label class="field" style="grid-column:1/-1">Target weight (kg)<input class="input" id="t" type="number" min="25" max="250"></label></div><button class="btn btn-primary" id="go" style="margin-top:14px">Calculate</button><div id="out" style="margin-top:18px"></div></section>
+</main></div>
+<script src="js/data.js"></script><script src="js/app.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+$("cast").innerHTML=["avocado","bowl","broccoli"].map(k=>char(k,84)).join("");
+
+const u=_l("vp_health",{});["h","w","t"].forEach(k=>$(k).value=u[k]||"");
+function calc(){const h=+$("h").value/100,w=+$("w").value,t=+$("t").value;if(!h||!w){$("out").innerHTML="<p class=\"muted\">Enter height and weight.</p>";return}
+ _s("vp_health",{h:h*100,w,t});const b=w/(h*h),c=b<18.5?"Underweight":b<25?"Healthy":b<30?"Overweight":"Obese",pos=Math.min(Math.max((b-12)/(40-12),0),1)*100;
+ const diff=t?(w-t):0;$("out").innerHTML=`<h2>BMI ${b.toFixed(1)} <span class="chip">${c}</span></h2><div class="bmi-scale"><i style="left:${pos}%"></i></div><div class="muted" style="font-size:.8rem;display:flex;justify-content:space-between"><span>Under</span><span>Healthy</span><span>Over</span><span>Obese</span></div>${t?`<p style="margin-top:12px">${diff==0?"You are at your target weight 🎉":Math.abs(diff).toFixed(1)+" kg to "+(diff>0?"lose":"gain")+" to reach your target."}</p>`:""}`}
+$("go").onclick=calc;calc();
+</script></body></html>
