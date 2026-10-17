@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meal planner - VitaPlate</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css"><link rel="stylesheet" href="css/theme.css"></head>
+<body data-page="planner.html" data-title="Meal planner">
+<div class="main"><main class="content">
+<section class="hero"><div><h1>Your week on a plate</h1><p>Pick meals or auto-generate a week that fits your diet. Nutrition totals update live.</p><button class="btn btn-lime" id="auto">Auto-generate week</button> <button class="btn btn-ghost" id="clr" style="color:#fff;border-color:#ffffff66">Clear</button></div><div class="cast" id="cast"></div></section>
+<section class="card" style="margin-bottom:20px"><div class="card-head"><h2>Week totals</h2><span class="muted" id="wk"></span></div><div class="grid g-3" id="tot"></div></section><div class="days" id="days"></div>
+</main></div>
+<script src="js/data.js"></script><script src="js/app.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+$("cast").innerHTML=["bowl","carrot","egg"].map(k=>char(k,84)).join("");
+
+const get=()=>_l("vp_plan",{}),goal=VP.user.goalKcal;
+function draw(){const p=get();let T={kcal:0,p:0,c:0,f:0};
+ $("days").innerHTML=DAYS.map(d=>{let k=0;const sel=MEALS.map(m=>{const id=(p[d]||{})[m],r=R.find(x=>x.id==id);if(r){k+=r.kcal;T.kcal+=r.kcal;T.p+=r.p;T.c+=r.c;T.f+=r.f}
+  return `<label class="muted" style="font-size:.8rem">${m}<select data-d="${d}" data-m="${m}"><option value="">Choose…</option>${R.filter(dietOk).map(x=>`<option value="${x.id}" ${x.id==id?"selected":""}>${x.name}</option>`).join("")}</select></label>`}).join("");
+  return `<article class="day"><h3>${d}<span class="chip ${k>goal?"warn":""}">${k} kcal</span></h3>${sel}<div class="bar"><i style="--v:${Math.min(k/goal*100,100)}%"></i></div></article>`}).join("");
+ const w=goal*7;$("wk").textContent=T.kcal+" of "+w+" kcal";
+ $("tot").innerHTML=[["Calories",T.kcal,w,"var(--olive)","kcal"],["Protein",T.p,90*7,"var(--sage)","g"],["Carbs",T.c,210*7,"var(--slate)","g"]].map(([n,v,g,c,u])=>`<div class="stat-row"><div><span>${n}</span><span class="muted">${v} / ${g} ${u}</span></div><div class="bar"><i style="--v:${Math.min(v/g*100,100)}%;--c:${c}"></i></div></div>`).join("")+`<div class="muted">Fat ${T.f} g this week</div>`}
+document.addEventListener("change",e=>{const d=e.target.dataset;if(!d.d)return;const p=get();p[d.d]=p[d.d]||{};p[d.d][d.m]=+e.target.value||0;_s("vp_plan",p);draw()});
+$("auto").onclick=()=>{const L=R.filter(dietOk);if(!L.length)return alert("No recipes match your diet filters.");const p={};DAYS.forEach(d=>{p[d]={};MEALS.forEach(m=>p[d][m]=L[Math.floor(Math.random()*L.length)].id)});_s("vp_plan",p);draw()};
+$("clr").onclick=()=>{_s("vp_plan",{});draw()};draw();
+</script></body></html>
