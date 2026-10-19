@@ -10,47 +10,72 @@
     <link rel="stylesheet" href="css/auth.css">
 </head>
 <body class="auth">
+    
+    <!-- Left Side: Slideshow -->
     <aside class="auth-art">
-        <img src="assets/logo.jpeg" alt="VitaPlate logo">
-        <h1>Welcome back</h1>
-        <p>Log in to see your pantry, recipes and weekly meal plan.</p>
-        <div class="cast" id="cast"></div>
+        <div class="slideshow-container">
+            <img src="images/img1.jpeg" class="slide active" alt="Healthy Lifestyle">
+            <img src="images/img2.jpeg" class="slide" alt="Cooking together">
+            <img src="images/img3.jpeg" class="slide" alt="Meal planner">
+            <img src="images/img4.jpeg" class="slide" alt="Family preparing food">
+            <img src="images/img5.jpeg" class="slide" alt="Meal prep">
+            <img src="images/img6.jpeg" class="slide" alt="Healthy eating collage">
+             <img src="images/img7.jpeg" class="slide" alt="Healthy eating collage">
+        </div>
+
+        <div class="auth-content">
+            <img src="assets/logo.jpeg" alt="VitaPlate logo" class="logo">
+            <h1>Welcome back</h1>
+            <p>Log in to see your pantry, recipes and weekly meal plan.</p>
+        </div>
     </aside>
 
+    <!-- Right Side: Login Form -->
     <main class="auth-form">
         <div class="auth-card">
             <h2 style="font-size:1.7rem">Log in</h2>
             <p class="sub">Good to see you again.</p>
             
-            <!-- Error Alert Box -->
-            <div class="alert" id="alert" role="alert" aria-live="assertive"></div>
-
+            <div class="alert" id="alert" role="alert"></div>
+            
             <form id="loginForm" novalidate style="display:flex;flex-direction:column;gap:14px">
                 <label class="field">Email
-                    <input class="input" id="email" type="email" autocomplete="email" aria-describedby="emailErr">
-                    <div class="err" id="emailErr" aria-live="polite"></div>
+                    <input class="input" id="email" type="email" autocomplete="email">
+                    <div class="err" id="emailErr"></div>
                 </label>
                 
                 <label class="field">Password
                     <div class="pw">
-                        <input class="input" id="pw" type="password" autocomplete="current-password" aria-describedby="pwErr">
-                        <!-- Show/Hide Button -->
-                        <button type="button" data-pw="pw" aria-label="Show password" aria-pressed="false">Show</button>
+                        <input class="input" id="pw" type="password" autocomplete="current-password">
+                        <button type="button" data-pw="pw">Show</button>
                     </div>
-                    <div class="err" id="pwErr" aria-live="polite"></div>
+                    <div class="err" id="pwErr"></div>
                 </label>
                 
                 <button class="btn btn-primary" type="submit">Log in</button>
             </form>
+            
             <p class="switch">New to VitaPlate? <a href="register.html">Create an account</a></p>
         </div>
     </main>
 
     <script src="js/data.js"></script>
     <script src="js/auth.js"></script>
+    
+    <!-- Slideshow Script -->
     <script>
-        // Cartoon characters render logic
-        document.getElementById("cast").innerHTML = ["tomato","broccoli","avocado","egg"].map(k=>char(k,80)).join("");
+        document.addEventListener("DOMContentLoaded", () => {
+            const slides = document.querySelectorAll('.slide');
+            let currentSlide = 0;
+
+            if (slides.length > 0) {
+                setInterval(() => {
+                    slides[currentSlide].classList.remove('active');
+                    currentSlide = (currentSlide + 1) % slides.length;
+                    slides[currentSlide].classList.add('active');
+                }, 3000); 
+            }
+        });
     </script>
 </body>
 </html>
