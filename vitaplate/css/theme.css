@@ -4,6 +4,9 @@
 .btn-primary{box-shadow:0 3px 0 var(--olive-dk)}.btn-primary:active{transform:translateY(2px);box-shadow:none}
 .hero{background:var(--leaf);color:#fff;border-radius:var(--r-lg);padding:28px 32px;display:grid;grid-template-columns:1.5fr auto;gap:24px;align-items:center;position:relative;overflow:hidden;margin-bottom:24px}
 .hero h1{color:#fff}.hero p{color:#cfe8c8;margin-top:6px;max-width:48ch}.hero .btn-lime{background:var(--lime);color:var(--leaf);margin-top:16px}
+.profile-hero{background:var(--peach)}
+.profile-hero h1{color:var(--leaf)}
+.profile-hero p{color:var(--olive-dk)}
 .hero .cast{display:flex;gap:6px;align-items:flex-end}
 .char{animation:bob 3s ease-in-out infinite}.char:nth-child(2){animation-delay:.5s}.char:nth-child(3){animation-delay:1s}
 @keyframes bob{50%{transform:translateY(-8px) rotate(3deg)}}
