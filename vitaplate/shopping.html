@@ -1,24 +1,492 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Shopping list - VitaPlate</title>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css"><link rel="stylesheet" href="css/theme.css"></head>
-<body data-page="shopping.html" data-title="Shopping list">
-<div class="main"><main class="content">
-<section class="hero"><div><h1>Shopping list</h1><p>Build a list from your meal plan. Only what is missing from your pantry is added.</p><button class="btn btn-lime" id="build">Build from meal plan</button></div><div class="cast" id="cast"></div></section>
-<div class="card" style="margin-bottom:20px"><div class="row"><input class="input" id="nm" placeholder="Add an item" style="flex:1;min-width:180px"><button class="btn btn-primary" id="add">Add</button><button class="btn btn-ghost" id="mv">Move bought to pantry</button></div></div><div id="list"></div>
-</main></div>
-<script src="js/data.js"></script><script src="js/app.js"></script>
-<script>
-const $=id=>document.getElementById(id);
-$("cast").innerHTML=["tomato","avocado","egg"].map(k=>char(k,84)).join("");
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+			<meta name="viewport" content="width=device-width,initial-scale=1">
+				<title>Shopping list - VitaPlate</title>
+				<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+					<link rel="stylesheet" href="css/styles.css">
+						<link rel="stylesheet" href="css/theme.css">
+							<style>
+								/* =========================================
+								PREMIUM SHOPPING LIST STYLES
+								========================================= */
+								.hero-premium {
+								background: linear-gradient(90deg, rgba(21, 74, 34, 0.95) 0%, rgba(21, 74, 34, 0.4) 100%),
+								url('https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1200&auto=format&fit=crop') center/cover no-repeat;
+								min-height: 200px;
+								border-radius: 24px;
+								box-shadow: 0 10px 30px rgba(21, 74, 34, 0.15);
+								margin-bottom: 24px;
+								display: flex;
+								align-items: center;
+								padding: 30px;
+								}
 
-let S=_l("vp_shop",[]);const save=()=>_s("vp_shop",S);
-function draw(){$("list").innerHTML=S.length?S.map(i=>`<div class="todo ${i.done?"done":""}"><input type="checkbox" data-c="${i.id}" ${i.done?"checked":""} aria-label="Bought ${i.name}"><b>${i.name}</b><button class="btn btn-ghost btn-sm" data-x="${i.id}">Remove</button></div>`).join(""):`<div class="card" style="text-align:center">${char("tomato",90)}<h3>Your list is empty</h3><p class="muted">Press Build from meal plan.</p></div>`;save()}
-const add=n=>{n=n.trim();if(n&&!S.some(x=>x.name.toLowerCase()==n.toLowerCase()))S.push({id:Math.random(),name:n,done:false})};
-$("add").onclick=()=>{add($("nm").value);$("nm").value="";draw()};
-$("build").onclick=()=>{const p=_l("vp_plan",{});Object.values(p).forEach(d=>Object.values(d).forEach(id=>{const r=R.find(x=>x.id==id);r&&r.ing.filter(i=>!haveIng(i)).forEach(add)}));draw()};
-$("mv").onclick=()=>{const P=_l("vp_pantry",[]);S.filter(i=>i.done).forEach(i=>P.push({id:Math.random(),name:i.name,cat:"Other",qty:1,unit:"pcs",exp:""}));_s("vp_pantry",P);S=S.filter(i=>!i.done);draw()};
-document.addEventListener("click",e=>{const d=e.target.dataset;if(d.x){S=S.filter(i=>i.id!=d.x);draw()}});
-document.addEventListener("change",e=>{const d=e.target.dataset;if(d.c){S.find(i=>i.id==d.c).done=e.target.checked;draw()}});draw();
-</script></body></html>
+								.hero-premium h1 { color: #fff; font-size: 2.2rem; margin-bottom: 8px; }
+								.hero-premium p { color: #dcebd8; font-size: 1.05rem; max-width: 500px; }
+
+								.action-bar {
+								background: #fff;
+								padding: 12px 16px;
+								border-radius: 20px;
+								box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+								display: flex;
+								gap: 12px;
+								align-items: center;
+								margin-bottom: 24px;
+								border: 1px solid #e5ede6;
+								}
+
+								.action-bar input {
+								border-radius: 12px;
+								padding: 12px 18px;
+								border: 1.5px solid transparent;
+								background: #f8fbf7;
+								font-size: 1rem;
+								transition: all 0.2s;
+								flex: 1;
+								outline: none;
+								}
+
+								.action-bar input:focus {
+								background: #fff;
+								border-color: #2f7d3a;
+								box-shadow: 0 0 0 4px rgba(47, 125, 58, 0.1);
+								}
+
+								.btn-premium {
+								border-radius: 12px;
+								padding: 12px 24px;
+								font-weight: 700;
+								font-size: 0.95rem;
+								transition: all 0.2s;
+								border: none;
+								cursor: pointer;
+								display: flex;
+								align-items: center;
+								gap: 8px;
+								}
+
+								.btn-add { background: #2f7d3a; color: #fff; }
+								.btn-add:hover { background: #1f5a29; transform: translateY(-2px); }
+
+								.btn-move { background: #fff; color: #2f7d3a; border: 1.5px solid #cbe0ce; }
+								.btn-move:hover { background: #f0f8ed; transform: translateY(-2px); }
+
+								.btn-clear { background: #fff0f0; color: #d64a4a; border: 1.5px solid #f5c2c2; padding: 12px 18px;}
+								.btn-clear:hover { background: #ffe0e0; transform: translateY(-2px); }
+
+								/* Shopping Cards Grid */
+								.shop-grid { display: flex; flex-direction: column; gap: 12px; }
+
+								.shop-card {
+								background: #fff;
+								border: 1px solid #e5ede6;
+								border-radius: 18px;
+								padding: 16px 20px;
+								display: flex;
+								align-items: center;
+								gap: 16px;
+								transition: all 0.25s ease;
+								box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+								}
+
+								.shop-card:hover {
+								transform: translateY(-2px);
+								box-shadow: 0 8px 25px rgba(21, 74, 34, 0.08);
+								border-color: #cbe0ce;
+								}
+
+								.shop-card.done {
+								background: #fafbfa;
+								opacity: 0.65;
+								border-color: #eee;
+								box-shadow: none;
+								transform: none;
+								}
+
+								.shop-card.done .item-name { text-decoration: line-through; color: #888; }
+
+								/* Custom Checkbox */
+								.custom-check {
+								width: 32px; height: 32px;
+								border-radius: 50%;
+								border: 2px solid #cdd8ce;
+								background: #fff;
+								cursor: pointer;
+								display: flex; align-items: center; justify-content: center;
+								transition: all 0.2s ease;
+								flex-shrink: 0;
+								padding: 0;
+								}
+
+								.custom-check:hover { border-color: #2f7d3a; background: #f4fbf2; }
+								.custom-check svg {
+								width: 18px; height: 18px;
+								stroke: #fff; stroke-width: 3; fill: none;
+								transition: transform 0.2s ease;
+								transform: scale(0);
+								pointer-events: none;
+								}
+
+								.shop-card.done .custom-check { background: #2f7d3a; border-color: #2f7d3a; }
+								.shop-card.done .custom-check svg { transform: scale(1); }
+
+								/* Real Photo Container */
+								.item-image {
+								width: 56px; height: 56px;
+								border-radius: 14px;
+								overflow: hidden;
+								flex-shrink: 0;
+								background: #f0f4f0;
+								box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+								}
+
+								.item-image img { width: 100%; height: 100%; object-fit: cover; }
+
+								.item-details { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+
+								.item-name {
+								font-family: var(--font-h);
+								font-size: 1.1rem;
+								color: #1d4638;
+								font-weight: 600;
+								}
+
+								.item-badge {
+								background: #eaf5e8;
+								color: #2b713a;
+								padding: 3px 10px;
+								border-radius: 8px;
+								font-weight: 600;
+								font-size: 0.75rem;
+								width: fit-content;
+								text-transform: uppercase;
+								letter-spacing: 0.5px;
+								}
+
+								.delete-btn {
+								width: 40px; height: 40px;
+								border-radius: 12px; border: none;
+								background: transparent; color: #b3c0b4;
+								cursor: pointer; display: flex; align-items: center; justify-content: center;
+								transition: all 0.2s; flex-shrink: 0;
+								}
+
+								.delete-btn:hover { background: #fff0f0; color: #d64a4a; }
+								.delete-btn svg { pointer-events: none; }
+
+								.empty-state {
+								text-align: center; padding: 60px 20px;
+								background: #fff; border-radius: 24px; border: 2px dashed #dcebd8;
+								}
+								.empty-state img { width: 120px; opacity: 0.8; margin-bottom: 20px; }
+
+								@media (max-width: 768px) {
+								.action-bar { flex-wrap: wrap; }
+								.action-bar input { width: 100%; flex: none; margin-bottom: 8px; }
+								.btn-premium { flex: 1; justify-content: center; padding: 12px 10px; }
+								.hero-premium { padding: 20px; min-height: 160px; }
+								.hero-premium h1 { font-size: 1.8rem; }
+								}
+							</style>
+						</head>
+	<body data-page="shopping.html" data-title="Shopping list">
+		<div class="main">
+			<main class="content">
+
+				<!-- Clean Hero Section (No Button) -->
+				<section class="hero hero-premium">
+					<div>
+						<h1>Your Shopping List</h1>
+						<p>Easily manage what you need to buy. Add items manually or type to get smart suggestions from our grocery list.</p>
+					</div>
+				</section>
+
+				<!-- Action Bar -->
+				<div class="action-bar">
+					<datalist id="grocery-suggestions"></datalist>
+					<input id="nm" list="grocery-suggestions" placeholder="Type to search (e.g. Rice, Onion, Coconut...)" autocomplete="off">
+
+						<button class="btn-premium btn-add" id="add" type="button">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+								<line x1="12" y1="5" x2="12" y2="19"></line>
+								<line x1="5" y1="12" x2="19" y2="12"></line>
+							</svg>
+							Add
+						</button>
+						<button class="btn-premium btn-move" id="mv" type="button">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+								<polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+								<line x1="12" y1="22.08" x2="12" y2="12"></line>
+							</svg>
+							To Pantry
+						</button>
+						<button class="btn-premium btn-clear" id="clr" type="button" title="Clear List">🗑️</button>
+					</div>
+
+				<div id="list" class="shop-grid"></div>
+
+			</main>
+		</div>
+		<script src="js/data.js"></script>
+		<script src="js/app.js"></script>
+		<script>
+			document.addEventListener('DOMContentLoaded', () => {
+			const $ = id => document.getElementById(id);
+
+			// 1. Setup State
+			let S = _l("vp_shop", []);
+			const save = () => _s("vp_shop", S);
+
+			// 2. Sri Lankan Groceries List (50+ items)
+			const sriLankanGroceries = [
+			"Samba Rice", "Nadu Rice", "Red Raw Rice", "Red Dhal", "Green Gram", "Chickpeas", "Cowpea",
+			"Coconut", "Onion", "Big Onion", "Garlic", "Ginger", "Potato", "Carrot", "Tomato", "Brinjal",
+			"Pumpkin", "Snake Gourd", "Okra", "Green Beans", "Cabbage", "Gotukola", "Mukunuwenna", "Spinach",
+			"Banana", "Papaya", "Mango", "Pineapple", "Lime", "Avocado", "Apple",
+			"Chicken", "Fish", "Maldive Fish", "Eggs", "Prawns",
+			"Fresh Milk", "Milk Powder", "Curd", "Butter", "Cheese",
+			"Chili Powder", "Turmeric", "Roasted Curry Powder", "Black Pepper", "Cinnamon", "Cardamom", "Cloves",
+			"Coconut Oil", "Soy Sauce", "Sugar", "Salt", "Ceylon Tea", "Coffee", "Kurakkan Flour", "Wheat Flour", "Bread", "Oats", "Pasta"
+			];
+
+			// Populate Datalist for Autocomplete
+			$("grocery-suggestions").innerHTML = sriLankanGroceries.map(item => `<option value="${item}">
+				`).join('');
+
+				// 3. Exact Image Dictionary (Highly Reliable 100% Working HD Real Photos)
+				const IMAGE_MAP = {
+				// Carbs & Grains
+				"samba rice": "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=150&h=150&fit=crop",
+				"nadu rice": "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=150&h=150&fit=crop",
+				"red raw rice": "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=150&h=150&fit=crop",
+				"red dhal": "https://images.unsplash.com/photo-1600189261867-30e5ffe7b8da?w=150&h=150&fit=crop",
+				"green gram": "https://images.unsplash.com/photo-1600189261867-30e5ffe7b8da?w=150&h=150&fit=crop",
+				"chickpeas": "https://images.unsplash.com/photo-1600189261867-30e5ffe7b8da?w=150&h=150&fit=crop",
+				"bread": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=150&h=150&fit=crop",
+				"oats": "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?w=150&h=150&fit=crop",
+				"pasta": "https://images.unsplash.com/photo-1551462147-37885acc36f1?w=150&h=150&fit=crop",
+				"kurakkan flour": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=150&h=150&fit=crop",
+				"wheat flour": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=150&h=150&fit=crop",
+
+				// Veggies & Fruits
+				"coconut": "https://images.unsplash.com/photo-1526318896980-cf78c088247c?w=150&h=150&fit=crop",
+				"onion": "https://images.unsplash.com/photo-1508747703725-719777637510?w=150&h=150&fit=crop",
+				"big onion": "https://images.unsplash.com/photo-1508747703725-719777637510?w=150&h=150&fit=crop",
+				"garlic": "https://images.unsplash.com/photo-1540148426945-6cf22a6b2383?w=150&h=150&fit=crop",
+				"ginger": "https://images.unsplash.com/photo-1599909533730-9259a6f88e74?w=150&h=150&fit=crop",
+				"potato": "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=150&h=150&fit=crop",
+				"carrot": "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=150&h=150&fit=crop",
+				"tomato": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150&h=150&fit=crop",
+				"brinjal": "https://images.unsplash.com/photo-1528825871115-3581a5387919?w=150&h=150&fit=crop",
+				"pumpkin": "https://images.unsplash.com/photo-1506918565525-1cc9ebf25a5f?w=150&h=150&fit=crop",
+				"snake gourd": "https://images.unsplash.com/photo-1590779033100-9f60a05a013d?w=150&h=150&fit=crop",
+				"okra": "https://images.unsplash.com/photo-1628603576885-2a834185d3b7?w=150&h=150&fit=crop",
+				"green beans": "https://images.unsplash.com/photo-1567375698348-5d9d5ae99de0?w=150&h=150&fit=crop",
+				"cabbage": "https://images.unsplash.com/photo-1550147760-44c9966d6bc7?w=150&h=150&fit=crop",
+				"gotukola": "https://images.unsplash.com/photo-1590779033100-9f60a05a013d?w=150&h=150&fit=crop",
+				"mukunuwenna": "https://images.unsplash.com/photo-1590779033100-9f60a05a013d?w=150&h=150&fit=crop",
+				"spinach": "https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=150&h=150&fit=crop",
+				"banana": "https://images.unsplash.com/photo-1571501679680-de32f1e7aad4?w=150&h=150&fit=crop",
+				"papaya": "https://images.unsplash.com/photo-1517282009859-f000ec3b26fe?w=150&h=150&fit=crop",
+				"mango": "https://images.unsplash.com/photo-1553279768-865429fa0078?w=150&h=150&fit=crop",
+				"pineapple": "https://images.unsplash.com/photo-1550258987-190a2d41a8ba?w=150&h=150&fit=crop",
+				"lime": "https://images.unsplash.com/photo-1590502593747-42a996133562?w=150&h=150&fit=crop",
+				"avocado": "https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=150&h=150&fit=crop",
+				"apple": "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=150&h=150&fit=crop",
+
+				// Meats & Dairy
+				"chicken": "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=150&h=150&fit=crop",
+				"fish": "https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=150&h=150&fit=crop",
+				"maldive fish": "https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=150&h=150&fit=crop",
+				"prawns": "https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=150&h=150&fit=crop",
+				"eggs": "https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=150&h=150&fit=crop",
+				"milk": "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=150&h=150&fit=crop",
+				"milk powder": "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=150&h=150&fit=crop",
+				"curd": "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=150&h=150&fit=crop",
+				"butter": "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=150&h=150&fit=crop",
+				"cheese": "https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=150&h=150&fit=crop",
+
+				// Spices & Others
+				"chili powder": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=150&h=150&fit=crop",
+				"turmeric": "https://images.unsplash.com/photo-1615485291234-9d6942d7d5a0?w=150&h=150&fit=crop",
+				"roasted curry powder": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=150&h=150&fit=crop",
+				"black pepper": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=150&h=150&fit=crop",
+				"cinnamon": "https://images.unsplash.com/photo-1509358271058-acd22cc93898?w=150&h=150&fit=crop",
+				"cardamom": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=150&h=150&fit=crop",
+				"cloves": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=150&h=150&fit=crop",
+				"coconut oil": "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=150&h=150&fit=crop",
+				"soy sauce": "https://images.unsplash.com/photo-1589564282621-9323653935d5?w=150&h=150&fit=crop",
+				"sugar": "https://images.unsplash.com/photo-1581441363689-1f3c3c414635?w=150&h=150&fit=crop",
+				"salt": "https://images.unsplash.com/photo-1615486171448-4fd6360ee1d4?w=150&h=150&fit=crop",
+				"tea": "https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?w=150&h=150&fit=crop",
+				"coffee": "https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=150&h=150&fit=crop"
+				};
+
+				// 4. Category Mapping
+				function getCategory(name) {
+				const n = name.toLowerCase();
+				if (/chicken|beef|pork|meat|fish|salmon|tuna|egg|prawn|maldive|dhal|green gram|chickpeas|cowpea/.test(n)) return "Protein";
+				if (/milk|cheese|yogurt|dairy|butter|cream|curd/.test(n)) return "Dairy";
+				if (/tomato|avocado|onion|garlic|ginger|vegetable|broccoli|carrot|potato|salad|spinach|apple|banana|fruit|coconut|pumpkin|brinjal|gourd|okra|beans|cabbage|gotukola|mukunuwenna|papaya|mango|pineapple|lime/.test(n)) return "Produce";
+				if (/rice|bread|flour|grain|quinoa|pasta|nut|seed|oats|kurakkan|sugar|salt/.test(n)) return "Pantry";
+				if (/chili|turmeric|curry|pepper|cinnamon|cardamom|cloves|oil|sauce|tea|coffee/.test(n)) return "Spices & Oils";
+				return "Other";
+				}
+
+				// 5. Image Resolver with Bulletproof Fallback
+				function getImage(name) {
+				const n = name.toLowerCase().trim();
+				// If exact match exists
+				if (IMAGE_MAP[n]) return IMAGE_MAP[n];
+
+				// Fallback matching logic based on keywords
+				if (/chicken|beef|pork|meat/.test(n)) return IMAGE_MAP["chicken"];
+				if (/fish|prawn|seafood/.test(n)) return IMAGE_MAP["fish"];
+				if (/rice|grain|quinoa/.test(n)) return IMAGE_MAP["samba rice"];
+				if (/dhal|lentil|gram|bean/.test(n)) return IMAGE_MAP["red dhal"];
+				if (/milk|dairy/.test(n)) return IMAGE_MAP["milk"];
+				if (/tomato|vegetable|broccoli|carrot|potato|greens/.test(n)) return IMAGE_MAP["tomato"];
+				if (/onion|garlic|ginger/.test(n)) return IMAGE_MAP["onion"];
+				if (/oil|sauce|spice|powder|pepper/.test(n)) return IMAGE_MAP["coconut oil"];
+
+				// Absolute final fallback: A generic grocery basket image
+				return "https://images.unsplash.com/photo-1542838132-92c53300491e?w=150&h=150&fit=crop";
+				}
+
+				// 6. Initialize with default items if empty
+				if (S.length === 0) {
+				S = sriLankanGroceries.slice(0, 15).map(item => ({
+				id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+				name: item,
+				done: false
+				}));
+				save();
+				}
+
+				// 7. Render Function
+				function draw() {
+				const listEl = $("list");
+
+				if (!S.length) {
+				listEl.innerHTML = `
+				<div class="empty-state">
+					<img src="https://cdn-icons-png.flaticon.com/512/11329/11329060.png" alt="Empty cart">
+						<h3 style="color: #1d4638; font-size: 1.4rem;">Your list is empty</h3>
+						<p class="muted" style="margin-top: 8px;">Use the search box above to add items.</p>
+					</div>`;
+				return;
+				}
+
+				const sorted = [...S].sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
+
+				listEl.innerHTML = sorted.map(item => `
+				<div class="shop-card ${item.done ? 'done' : ''}">
+
+					<button type="button" class="custom-check" data-check="${item.id}" aria-label="Toggle ${item.name}">
+						<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+							<polyline points="20 6 9 17 4 12"></polyline>
+						</svg>
+					</button>
+
+					<div class="item-image">
+						<!-- Double-layered Fallback (If Image fails, it loads a safe grocery image) -->
+						<img src="${getImage(item.name)}" alt="${item.name}" loading="lazy" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=150&h=150&fit=crop';">
+        </div>
+
+					<div class="item-details">
+						<span class="item-name">${item.name}</span>
+						<span class="item-badge">${getCategory(item.name)}</span>
+					</div>
+
+					<button type="button" class="delete-btn" data-delete="${item.id}" aria-label="Remove ${item.name}">
+						<svg viewBox="0 0 24 24" width="20" height="20" stroke-linecap="round" stroke-linejoin="round">
+							<line x1="18" y1="6" x2="6" y2="18"></line>
+							<line x1="6" y1="6" x2="18" y2="18"></line>
+						</svg>
+					</button>
+
+				</div>
+				`).join('');
+
+				save();
+				}
+
+				// 8. Event Listeners
+				$("add").addEventListener("click", () => {
+				const input = $("nm");
+				const val = input.value.trim();
+				if (val && !S.some(x => x.name.toLowerCase() === val.toLowerCase())) {
+				S.push({
+				id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+				name: val,
+				done: false
+				});
+				input.value = "";
+				draw();
+				}
+				});
+
+				$("nm").addEventListener("keypress", (e) => { if (e.key === "Enter") $("add").click(); });
+
+				// Move to Pantry
+				$("mv").addEventListener("click", () => {
+				const boughtItems = S.filter(i => i.done);
+
+				if (boughtItems.length === 0) {
+				alert("Please check (✓) the items you have bought first!");
+				return;
+				}
+
+				const P = _l("vp_pantry", []);
+				boughtItems.forEach(i => {
+				P.push({
+				id: Date.now() + Math.random(),
+				name: i.name,
+				cat: getCategory(i.name),
+				qty: 1,
+				unit: "pcs",
+				exp: ""
+				});
+				});
+
+				_s("vp_pantry", P);
+				S = S.filter(i => !i.done); // Remove bought items from shopping list
+				draw();
+				});
+
+				// Clear List
+				$("clr").addEventListener("click", () => {
+				if (confirm("Clear entire shopping list?")) {
+				S = [];
+				draw();
+				}
+				});
+
+				// Event Delegation for Cards
+				$("list").addEventListener("click", (e) => {
+				const checkBtn = e.target.closest('[data-check]');
+				if (checkBtn) {
+				const itemId = checkBtn.getAttribute('data-check');
+				const item = S.find(i => String(i.id) === String(itemId));
+				if (item) { item.done = !item.done; draw(); }
+				return;
+				}
+
+				const deleteBtn = e.target.closest('[data-delete]');
+				if (deleteBtn) {
+				const itemId = deleteBtn.getAttribute('data-delete');
+				S = S.filter(i => String(i.id) !== String(itemId));
+				draw();
+				}
+				});
+
+				// Initial render
+				draw();
+				});
+			</script>
+	</body>
+</html>
