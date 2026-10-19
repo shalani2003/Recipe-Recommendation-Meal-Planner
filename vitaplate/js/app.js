@@ -7,16 +7,22 @@ function buildShell(){
   const links=NAV.map(([h,i,t])=>`<a href="${h}" ${h===page?'aria-current="page"':''}><span aria-hidden="true">${i}</span>${t}</a>`).join("");
   const u=VP.user;
   document.body.insertAdjacentHTML("afterbegin",`
-  <aside class="sidebar" id="sidebar"><div class="brand"><img src="assets/logo.jpeg" alt="VitaPlate - Nourish. Plan. Thrive."></div>
+  <aside class="sidebar" id="sidebar"><button class="pin-btn" id="pinBtn" aria-pressed="false">📌 Pin</button><div class="brand"><img src="assets/logo.jpeg" alt="VitaPlate - Nourish. Plan. Thrive."></div>
   <nav class="nav" aria-label="Main">${links}</nav>
   <div class="user-card"><div class="avatar">${u.name[0]}</div><div><b>${u.name}</b><div class="muted" style="font-size:.8rem">Goal: ${u.goalKcal} kcal/day</div></div></div><button class="btn btn-ghost btn-sm" id="logout">Log out</button></aside>
   <div class="scrim" id="scrim"></div>`);
   const main=document.querySelector(".main");
   main.insertAdjacentHTML("afterbegin",`<header class="topbar"><button class="btn btn-ghost btn-sm menu-btn" id="menuBtn" aria-label="Open menu">☰</button><input class="input search" type="search" placeholder="Search recipes or pantry" aria-label="Search"><span class="muted" style="margin-left:auto">${title}</span></header>`);
-  const toggle=()=>document.body.classList.toggle("nav-open");
+  const pinBtn=document.getElementById("pinBtn");
+  const pinned=_l("vp_nav_pinned",false);
+  const updatePin=()=>{document.body.classList.toggle("nav-pinned",pinnedState);pinBtn.setAttribute("aria-pressed",pinnedState);pinBtn.textContent=pinnedState?"📌 Pinned":"📌 Pin"};
+  let pinnedState=pinned;
+  const toggle=()=>{if(!pinnedState)document.body.classList.toggle("nav-open")};
   document.getElementById("menuBtn").onclick=toggle;
+  pinBtn.onclick=()=>{pinnedState=!pinnedState;_s("vp_nav_pinned",pinnedState);if(pinnedState)document.body.classList.add("nav-open");updatePin()};
   document.getElementById("scrim").onclick=toggle;
   document.getElementById("logout").onclick=()=>{localStorage.removeItem("vp_session");location.href="login.html"};
+  updatePin();
 }
 function setRing(el,value,goal){
   const c=2*Math.PI*76, pct=Math.min(value/goal,1);
