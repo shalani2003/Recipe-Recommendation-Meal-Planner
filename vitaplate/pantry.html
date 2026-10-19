@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pantry - VitaPlate</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css"><link rel="stylesheet" href="css/theme.css"><link rel="stylesheet" href="css/pantry.css"><link rel="stylesheet" href="css/food-pages.css"></head>
+<body class="pantry" data-page="pantry.html" data-title="Pantry">
+<div class="main"><main class="content">
+  <section class="food-hero pantry-hero"><div class="food-hero-copy"><span class="eyebrow">YOUR FRESH FOOD HUB</span><h1>A happier kitchen<br>starts right here.</h1><p>Keep track of the good stuff you have, use fresh ingredients in time, and turn everyday food into healthy meals.</p><a class="btn btn-lime" href="recipes.html">Find recipes <span aria-hidden="true">→</span></a><div class="hero-mini-stats"><span>🥬 Fresh ingredients</span><span>♻️ Less food waste</span><span>🍲 More home cooking</span></div></div><img class="food-hero-photo" src="assets/food/salad-bowl.jpg" alt="Fresh colourful bowl of vegetables and healthy ingredients"></section>
+  <section class="pantry-summary"><div class="summary-copy"><span class="eyebrow">PANTRY OVERVIEW</span><h2>Your kitchen at a glance</h2><p class="muted">A little planning helps your ingredients go further.</p></div><div class="tiles"><div class="tile"><span class="tile-icon">🧺</span><b id="sItems">0</b><span>Items tracked</span></div><div class="tile"><span class="tile-icon">⏰</span><b id="sSoon">0</b><span>Use soon</span></div><div class="tile"><span class="tile-icon">🌿</span><b id="sDiet">0</b><span>Diet filters</span></div></div></section>
+  <div class="layout">
+    <div class="grid">
+      <section class="card pantry-add-card"><div class="card-head"><div><span class="eyebrow">STOCK YOUR SHELF</span><h2>Add to your pantry</h2></div><span class="card-icon">🥑</span></div>
+        <form id="addForm" class="form-grid">
+          <label class="field full">Name<input class="input" id="name" required placeholder="e.g. Red onions"></label>
+          <label class="field">Category<select class="input" id="cat"></select></label>
+          <label class="field">Expiry date<input class="input" id="exp" type="date"></label>
+          <label class="field">Amount<input class="input" id="qty" type="number" min="1" value="1"></label>
+          <label class="field">Unit<select class="input" id="unit"><option>pcs</option><option>g</option><option>kg</option><option>ml</option><option>l</option><option>cups</option></select></label>
+          <button class="btn btn-primary full" type="submit">Add to pantry</button>
+        </form>
+        <p class="muted" style="margin:14px 0 4px;font-size:.85rem">Quick add</p><div class="quick" id="quick"></div>
+      </section>
+      <section class="card diet-card"><div class="card-head"><div><span class="eyebrow">PERSONALISE</span><h2>Your food preferences</h2></div><span class="card-icon">🌱</span></div><div class="diet" id="diets"></div></section>
+    </div>
+    <section>
+      <div class="inventory-heading"><div><span class="eyebrow">WHAT YOU HAVE</span><h2>Your ingredients</h2><p class="muted">Freshness labels help you know what to use first.</p></div><div class="toolbar"><input class="input" id="filter" type="search" placeholder="Search ingredients…" aria-label="Filter pantry"><button class="btn btn-ghost btn-sm" id="clear">Clear all</button></div></div><div id="groups"></div>
+    </section>
+  </div>
+</main></div>
+<script src="js/data.js"></script><script src="js/app.js"></script><script src="js/pantry.js"></script>
+</body></html>
