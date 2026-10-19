@@ -35,6 +35,7 @@ a{color:inherit;text-decoration:none}
 .scrim{display:none}
 body.nav-open:not(.nav-pinned) .sidebar{transform:translateX(-100%)}
 body.nav-open:not(.nav-pinned) .main{margin-left:0}
+body.nav-open:not(.nav-pinned) .content{margin-left:auto;margin-right:auto}
 body.nav-pinned .sidebar{transform:none}
 body.nav-pinned .main{margin-left:var(--side)}
 
