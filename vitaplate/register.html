@@ -10,61 +10,49 @@
     <link rel="stylesheet" href="css/auth.css">
 </head>
 <body class="auth">
-    
-    <!-- Left Side: Slideshow -->
     <aside class="auth-art">
-        <div class="slideshow-container">
-            <img src="images/img1.jpeg" class="slide active" alt="Healthy Lifestyle">
-            <img src="images/img2.jpeg" class="slide" alt="Cooking together">
-            <img src="images/img3.jpeg" class="slide" alt="Meal planner">
-            <img src="images/img4.jpeg" class="slide" alt="Family preparing food">
-            <img src="images/img5.jpeg" class="slide" alt="Meal prep">
-            <img src="images/img6.jpeg" class="slide" alt="Healthy eating collage">
-            <img src="images/img7.jpeg" class="slide" alt="Healthy eating collage">
-        </div>
-
-        <div class="auth-content">
-            <img src="assets/logo.jpeg" alt="VitaPlate logo" class="logo">
-            <h1>Nourish. Plan. Thrive.</h1>
-            <p>Create your free account and start planning meals from what you already have at home.</p>
-        </div>
+        <img src="assets/logo.jpeg" alt="VitaPlate logo">
+        <h1>Nourish. Plan. Thrive.</h1>
+        <p>Create your free account and start planning meals from what you already have at home.</p>
+        <div class="cast" id="cast"></div>
     </aside>
 
-    <!-- Right Side: Register Form -->
     <main class="auth-form">
         <div class="auth-card">
             <h2 style="font-size:1.7rem">Create account</h2>
             <p class="sub">It takes less than a minute.</p>
             
-            <div class="alert" id="alert" role="alert"></div>
-            
+            <!-- Error Alert Box -->
+            <div class="alert" id="alert" role="alert" aria-live="assertive"></div>
+
             <form id="regForm" novalidate style="display:flex;flex-direction:column;gap:12px">
                 <label class="field">Full name
-                    <input class="input" id="name" autocomplete="name">
-                    <div class="err" id="nameErr"></div>
+                    <input class="input" id="name" autocomplete="name" aria-describedby="nameErr">
+                    <div class="err" id="nameErr" aria-live="polite"></div>
                 </label>
                 
                 <label class="field">Email
-                    <input class="input" id="email" type="email" autocomplete="email">
-                    <div class="err" id="emailErr"></div>
+                    <input class="input" id="email" type="email" autocomplete="email" aria-describedby="emailErr">
+                    <div class="err" id="emailErr" aria-live="polite"></div>
                 </label>
                 
                 <label class="field">Password
                     <div class="pw">
-                        <input class="input" id="pw" type="password" autocomplete="new-password">
-                        <button type="button" data-pw="pw">Show</button>
+                        <input class="input" id="pw" type="password" autocomplete="new-password" aria-describedby="pwErr">
+                        <button type="button" data-pw="pw" aria-label="Show password" aria-pressed="false">Show</button>
                     </div>
-                    <div class="err" id="pwErr"></div>
+                    <div class="err" id="pwErr" aria-live="polite"></div>
                 </label>
                 
                 <label class="field">Confirm password
                     <div class="pw">
-                        <input class="input" id="pw2" type="password" autocomplete="new-password">
-                        <button type="button" data-pw="pw2">Show</button>
+                        <input class="input" id="pw2" type="password" autocomplete="new-password" aria-describedby="pw2Err">
+                        <button type="button" data-pw="pw2" aria-label="Show confirm password" aria-pressed="false">Show</button>
                     </div>
-                    <div class="err" id="pw2Err"></div>
+                    <div class="err" id="pw2Err" aria-live="polite"></div>
                 </label>
                 
+                <!-- Terms Checkbox -->
                 <label class="check">
                     <input type="checkbox" id="terms">
                     <span>I agree to the terms and privacy policy.</span>
@@ -72,28 +60,15 @@
                 
                 <button class="btn btn-primary" type="submit">Create account</button>
             </form>
-            
             <p class="switch">Already have an account? <a href="login.html">Log in</a></p>
         </div>
     </main>
 
     <script src="js/data.js"></script>
     <script src="js/auth.js"></script>
-    
-    <!-- Slideshow Script -->
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const slides = document.querySelectorAll('.slide');
-            let currentSlide = 0;
-
-            if (slides.length > 0) {
-                setInterval(() => {
-                    slides[currentSlide].classList.remove('active');
-                    currentSlide = (currentSlide + 1) % slides.length;
-                    slides[currentSlide].classList.add('active');
-                }, 3000); // පින්තූර 3 තත්පරවලට වරක් මාරු වේ
-            }
-        });
+        // Cartoon characters render logic
+        document.getElementById("cast").innerHTML = ["tomato","broccoli","avocado","egg"].map(k=>char(k,80)).join("");
     </script>
 </body>
 </html>

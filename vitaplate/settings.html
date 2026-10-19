@@ -9,14 +9,21 @@
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/theme.css">
     <style>
+        .content {
+            margin-left: auto;
+            margin-right: auto;
+        }
+
         .settings-grid {
             display: grid;
             gap: 20px;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
-        .settings-grid .card:first-child {
+        .settings-grid .account-details-card {
             grid-row: span 2;
         }
 
@@ -50,13 +57,105 @@
             margin-top: 12px;
         }
 
+        .settings-profile-bar {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            max-width: 900px;
+            margin: 0 auto 24px;
+            padding: 20px 24px;
+            border-radius: var(--r-lg);
+            background: linear-gradient(110deg, #205a37, #3f8750);
+            color: #fff;
+            box-shadow: 0 8px 20px #205a3726;
+        }
+
+        .profile-picture-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 14px;
+        }
+
+        .profile-picture-section {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .profile-picture-preview {
+            display: grid;
+            place-items: center;
+            width: 92px;
+            height: 92px;
+            flex: 0 0 92px;
+            overflow: hidden;
+            border: 3px solid var(--sage);
+            border-radius: 50%;
+            background: var(--sage-lt);
+            color: #3d6b33;
+            font-size: 2.4rem;
+        }
+
+        .profile-picture-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .profile-picture-input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            white-space: nowrap;
+        }
+
+        .profile-picture-label {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border: 1px solid var(--line);
+            border-radius: var(--r-sm);
+            background: var(--sage-lt);
+            color: #3d6b33;
+            font-size: .85rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .profile-picture-label:hover {
+            background: #d5e8cc;
+        }
+
+        .settings-profile-bar h1 {
+            color: #fff;
+            font-size: 1.7rem;
+        }
+
+        .settings-profile-bar p {
+            margin-top: 4px;
+            color: #e6f3e7;
+        }
+
         @media (max-width: 700px) {
+            .settings-profile-bar {
+                padding: 18px;
+            }
+
             .settings-grid {
                 grid-template-columns: 1fr;
             }
 
-            .settings-grid .card:first-child {
+            .settings-grid .account-details-card {
                 grid-row: auto;
+            }
+
+            .profile-picture-section {
+                align-items: flex-start;
+                flex-direction: column;
             }
         }
     </style>
@@ -64,15 +163,31 @@
 <body data-page="settings.html" data-title="Settings">
     <div class="main">
         <main class="content">
-            <section class="hero">
+            <section class="settings-profile-bar" aria-labelledby="settingsTitle">
                 <div>
-                    <h1>Account settings</h1>
+                    <h1 id="settingsTitle">Account settings</h1>
                     <p>Update your account details and notification preferences.</p>
                 </div>
             </section>
 
             <div class="settings-grid">
-                <section class="card">
+                <section class="card profile-picture-card">
+                    <h2>Profile picture</h2>
+                    <div class="profile-picture-section">
+                        <div class="profile-picture-preview" id="settingsAvatar" aria-label="Profile picture preview">👤</div>
+                        <div>
+                            <p class="muted">Choose an image to display in your account banner.</p>
+                            <div class="profile-picture-control">
+                                <label class="profile-picture-label" for="profilePicture">Upload picture</label>
+                                <input class="profile-picture-input" id="profilePicture" type="file" accept="image/*">
+                                <button class="btn btn-ghost btn-sm" id="resetProfilePicture" type="button">Delete picture</button>
+                                <span class="muted" id="profilePictureStatus">No picture selected</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card account-details-card">
                     <h2>Account details</h2>
                     <label class="field" style="margin-top:14px">
                         Name
@@ -137,6 +252,61 @@
     <script>
         const $ = id => document.getElementById(id);
         const emailOk = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        let profilePicture = "";
+
+        const showProfilePicture = picture => {
+            const avatar = $("settingsAvatar");
+            if (picture) {
+                avatar.replaceChildren(Object.assign(document.createElement("img"), {
+                    src: picture,
+                    alt: "Current profile picture"
+                }));
+                $("profilePictureStatus").textContent = "Picture selected";
+            } else {
+                avatar.textContent = "👤";
+                $("profilePictureStatus").textContent = "No picture selected";
+            }
+        };
+
+        $("profilePicture").onchange = event => {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith("image/")) {
+                $("error").textContent = "Choose an image file.";
+                event.target.value = "";
+                return;
+            }
+            if (file.size > 2 * 1024 * 1024) {
+                $("error").textContent = "Choose an image smaller than 2 MB.";
+                event.target.value = "";
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                profilePicture = reader.result;
+                showProfilePicture(profilePicture);
+                $("error").textContent = "";
+            };
+            reader.onerror = () => {
+                $("error").textContent = "The profile picture could not be read.";
+                event.target.value = "";
+            };
+            reader.readAsDataURL(file);
+        };
+
+        $("resetProfilePicture").onclick = () => {
+            if (!profilePicture || !window.confirm("Delete your current profile picture?")) return;
+
+            profilePicture = "";
+            $("profilePicture").value = "";
+            showProfilePicture(profilePicture);
+            account.profilePicture = "";
+            _s("vp_users", accountList);
+            _s("vp_user", { ..._l("vp_user", {}), profilePicture: "" });
+            $("saved").textContent = "Profile picture deleted";
+        };
+
         const hash = async value => {
             const bytes = await crypto.subtle.digest(
                 "SHA-256",
@@ -159,6 +329,8 @@
         if (!account) {
             location.replace("login.html");
         } else {
+            profilePicture = _l("vp_user", {}).profilePicture || account.profilePicture || "";
+            showProfilePicture(profilePicture);
             $("name").value = account.name;
             $("email").value = account.email;
             $("notificationMode").value = preferences.notificationMode;
@@ -198,10 +370,11 @@
 
             account.name = name;
             account.email = email;
+            account.profilePicture = profilePicture;
             if (newPassword) account.hash = await hash(newPassword);
             _s("vp_users", accountList);
             _s("vp_session", { email });
-            _s("vp_user", { ..._l("vp_user", {}), name });
+            _s("vp_user", { ..._l("vp_user", {}), name, profilePicture });
             _s("vp_settings", {
                 notificationMode: $("notificationMode").value,
                 mealReminders: $("mealReminders").checked,
