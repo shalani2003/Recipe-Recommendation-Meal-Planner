@@ -25,10 +25,12 @@ a{color:inherit;text-decoration:none}
 .nav a:hover{background:var(--peach-lt);color:var(--ink)}
 .nav a[aria-current=page]{background:var(--peach);color:var(--olive-dk);font-weight:700}
 .user-card{display:flex;gap:10px;align-items:center;padding:12px;border-radius:var(--r-md);background:var(--bg)}
+.user-card a{color:inherit;text-decoration:none}
+.user-card a:hover,.user-card a:focus-visible{text-decoration:underline;color:var(--olive-dk)}
+.user-card a[aria-current=page]{color:var(--olive-dk);font-weight:700}
 .avatar{width:38px;height:38px;border-radius:50%;background:var(--olive);color:#fff;display:grid;place-items:center;font-weight:700}
 .main{margin-left:var(--side);min-height:100vh}
 .topbar{display:flex;align-items:center;gap:14px;padding:16px 32px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:20}
-.topbar .search{flex:1;max-width:420px}
 .menu-btn{display:inline-flex}
 .content{padding:28px 32px;max-width:1200px}
 .page-head{margin-bottom:24px}.page-head p{color:var(--muted)}

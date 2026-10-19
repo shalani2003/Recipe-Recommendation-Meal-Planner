@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Settings - VitaPlate</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/theme.css">
+    <style>
+        .settings-grid {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            max-width: 900px;
+        }
+
+        .settings-grid .card:first-child {
+            grid-row: span 2;
+        }
+
+        .settings-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .settings-actions [role="status"] {
+            margin: 0;
+        }
+
+        .check-field {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .check-field input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--olive);
+        }
+
+        .settings-error {
+            color: var(--danger);
+            min-height: 1.5em;
+            margin-top: 12px;
+        }
+
+        @media (max-width: 700px) {
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .settings-grid .card:first-child {
+                grid-row: auto;
+            }
+        }
+    </style>
+</head>
+<body data-page="settings.html" data-title="Settings">
+    <div class="main">
+        <main class="content">
+            <section class="hero">
+                <div>
+                    <h1>Account settings</h1>
+                    <p>Update your account details and notification preferences.</p>
+                </div>
+            </section>
+
+            <div class="settings-grid">
+                <section class="card">
+                    <h2>Account details</h2>
+                    <label class="field" style="margin-top:14px">
+                        Name
+                        <input class="input" id="name" autocomplete="name">
+                    </label>
+
+                    <label class="field" style="margin-top:12px">
+                        Email
+                        <input class="input" id="email" type="email" autocomplete="email">
+                    </label>
+
+                    <h2 style="margin-top:24px">Change password</h2>
+                    <p class="muted" style="margin-top:6px">Leave the password fields blank to keep your current password.</p>
+
+                    <label class="field" style="margin-top:12px">
+                        Current password
+                        <input class="input" id="currentPassword" type="password" autocomplete="current-password">
+                    </label>
+
+                    <label class="field" style="margin-top:12px">
+                        New password
+                        <input class="input" id="newPassword" type="password" autocomplete="new-password">
+                    </label>
+                </section>
+
+                <section class="card">
+                    <h2>Notifications</h2>
+                    <label class="field" style="margin-top:14px">
+                        Notification mode
+                        <select class="input" id="notificationMode">
+                            <option value="all">All notifications</option>
+                            <option value="important">Important notifications only</option>
+                            <option value="off">Turn off notifications</option>
+                        </select>
+                    </label>
+
+                    <label class="check-field">
+                        <input type="checkbox" id="mealReminders">
+                        Meal reminders
+                    </label>
+                    <label class="check-field">
+                        <input type="checkbox" id="weeklySummary">
+                        Weekly nutrition summary
+                    </label>
+                </section>
+
+                <section class="card">
+                    <h2>Save changes</h2>
+                    <p class="muted" style="margin-top:6px">Your settings are saved in this browser.</p>
+                    <p class="settings-error" id="error" role="alert"></p>
+                    <div class="settings-actions">
+                        <button class="btn btn-primary" id="save">Save settings</button>
+                        <p class="muted" id="saved" role="status"></p>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        const $ = id => document.getElementById(id);
+        const emailOk = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        const hash = async value => {
+            const bytes = await crypto.subtle.digest(
+                "SHA-256",
+                new TextEncoder().encode(value)
+            );
+            return [...new Uint8Array(bytes)]
+                .map(byte => byte.toString(16).padStart(2, "0"))
+                .join("");
+        };
+
+        const session = _l("vp_session", null);
+        const accountList = _l("vp_users", []);
+        const account = session && accountList.find(user => user.email === session.email);
+        const preferences = _l("vp_settings", {
+            notificationMode: "all",
+            mealReminders: true,
+            weeklySummary: true
+        });
+
+        if (!account) {
+            location.replace("login.html");
+        } else {
+            $("name").value = account.name;
+            $("email").value = account.email;
+            $("notificationMode").value = preferences.notificationMode;
+            $("mealReminders").checked = preferences.mealReminders;
+            $("weeklySummary").checked = preferences.weeklySummary;
+        }
+
+        $("save").onclick = async () => {
+            $("error").textContent = "";
+            $("saved").textContent = "";
+
+            const name = $("name").value.trim();
+            const email = $("email").value.trim().toLowerCase();
+            const currentPassword = $("currentPassword").value;
+            const newPassword = $("newPassword").value;
+
+            if (!name || name.length < 2) {
+                $("error").textContent = "Enter a name with at least 2 characters.";
+                return;
+            }
+            if (!emailOk(email)) {
+                $("error").textContent = "Enter a valid email address.";
+                return;
+            }
+            if (accountList.some(user => user.email === email && user !== account)) {
+                $("error").textContent = "That email is already in use.";
+                return;
+            }
+            if (newPassword && (!currentPassword || newPassword.length < 8 || !/\d/.test(newPassword))) {
+                $("error").textContent = "Use your current password and a new password with 8+ characters and one number.";
+                return;
+            }
+            if (newPassword && account.hash !== await hash(currentPassword)) {
+                $("error").textContent = "Current password is incorrect.";
+                return;
+            }
+
+            account.name = name;
+            account.email = email;
+            if (newPassword) account.hash = await hash(newPassword);
+            _s("vp_users", accountList);
+            _s("vp_session", { email });
+            _s("vp_user", { ..._l("vp_user", {}), name });
+            _s("vp_settings", {
+                notificationMode: $("notificationMode").value,
+                mealReminders: $("mealReminders").checked,
+                weeklySummary: $("weeklySummary").checked
+            });
+
+            $("currentPassword").value = "";
+            $("newPassword").value = "";
+            $("saved").textContent = "Saved";
+        };
+    </script>
+</body>
+</html>
