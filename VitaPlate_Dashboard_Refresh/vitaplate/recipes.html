@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Recipes - VitaPlate</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css"><link rel="stylesheet" href="css/theme.css"></head>
+<body data-page="recipes.html" data-title="Recipes">
+<div class="main"><main class="content">
+<section class="hero"><div><h1>Recipes picked for you</h1><p>Based on your pantry and diet. Heart your favourites and rate what you cook.</p><a class="btn btn-lime" href="pantry.html">Edit pantry</a></div><div class="cast" id="cast"></div></section>
+<div class="filters"><input class="input" id="q" type="search" placeholder="Search recipes" aria-label="Search recipes" style="max-width:260px"><button class="tab" data-m="all" aria-pressed="true">All</button><button class="tab" data-m="now" aria-pressed="false">Cook now</button><button class="tab" data-m="fav" aria-pressed="false">Favourites</button></div><div class="rgrid" id="grid"></div>
+</main></div>
+<script src="js/data.js"></script><script src="js/app.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+$("cast").innerHTML=["tomato","broccoli","avocado"].map(k=>char(k,84)).join("");
+
+let mode="all",favs=_l("vp_fav",[]),rate=_l("vp_rate",{});
+function draw(){const q=$("q").value.toLowerCase();
+ const L=R.filter(r=>dietOk(r)&&r.name.toLowerCase().includes(q)&&(mode=="all"||(mode=="fav"&&favs.includes(r.id))||(mode=="now"&&matchPct(r)>=60))).sort((a,b)=>matchPct(b)-matchPct(a));
+ $("grid").innerHTML=L.length?L.map(r=>`<article class="rcard"><button class="heart" data-f="${r.id}" aria-pressed="${favs.includes(r.id)}" aria-label="Favourite">${favs.includes(r.id)?"❤️":"🤍"}</button><div class="art">${char(r.kind,96)}</div><h3>${r.name}</h3>
+ <div class="meta"><span class="chip">${matchPct(r)}% in pantry</span><span class="chip warn">${r.kcal} kcal</span><span class="chip is-off">${r.time} min</span></div>
+ <div class="muted" style="font-size:.85rem">P ${r.p}g · C ${r.c}g · F ${r.f}g</div>
+ <div class="stars">${[1,2,3,4,5].map(n=>`<button class="${n<=(rate[r.id]||0)?"on":""}" data-r="${r.id}:${n}" aria-label="${n} stars">★</button>`).join("")}</div>
+ <div class="row"><button class="btn btn-primary btn-sm" data-plan="${r.id}">Add to plan</button><button class="btn btn-ghost btn-sm" data-shop="${r.id}">Missing to list</button></div></article>`).join(""):
+ `<div class="card" style="grid-column:1/-1;text-align:center">${char("egg",90)}<h3>Nothing here yet</h3><p class="muted">Try another filter or add items to your pantry.</p></div>`}
+document.addEventListener("click",e=>{const d=e.target.dataset;
+ if(d.m){mode=d.m;document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-pressed",t.dataset.m==mode))}
+ else if(d.f){const i=+d.f;favs=favs.includes(i)?favs.filter(x=>x!=i):[...favs,i];_s("vp_fav",favs)}
+ else if(d.r){const[i,n]=d.r.split(":");rate[i]=rate[i]==n?0:+n;_s("vp_rate",rate)}
+ else if(d.plan){const p=_l("vp_plan",{});outer:for(const dy of DAYS)for(const m of MEALS){p[dy]=p[dy]||{};if(!p[dy][m]){p[dy][m]=+d.plan;break outer}}_s("vp_plan",p);e.target.textContent="Added ✓"}
+ else if(d.shop){const r=R.find(x=>x.id==d.shop),s=_l("vp_shop",[]);r.ing.filter(i=>!haveIng(i)).forEach(i=>{if(!s.some(x=>x.name==i))s.push({id:Math.random(),name:i,done:false})});_s("vp_shop",s);e.target.textContent="Listed ✓"}
+ else return;if(!d.plan&&!d.shop)draw()});
+$("q").oninput=draw;draw();
+</script></body></html>
