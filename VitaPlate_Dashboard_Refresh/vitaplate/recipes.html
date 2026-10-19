@@ -2,26 +2,26 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Recipes - VitaPlate</title>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css"><link rel="stylesheet" href="css/theme.css"></head>
+<link rel="stylesheet" href="css/styles.css"><link rel="stylesheet" href="css/theme.css"><link rel="stylesheet" href="css/food-pages.css"></head>
 <body data-page="recipes.html" data-title="Recipes">
 <div class="main"><main class="content">
-<section class="hero"><div><h1>Recipes picked for you</h1><p>Based on your pantry and diet. Heart your favourites and rate what you cook.</p><a class="btn btn-lime" href="pantry.html">Edit pantry</a></div><div class="cast" id="cast"></div></section>
-<div class="filters"><input class="input" id="q" type="search" placeholder="Search recipes" aria-label="Search recipes" style="max-width:260px"><button class="tab" data-m="all" aria-pressed="true">All</button><button class="tab" data-m="now" aria-pressed="false">Cook now</button><button class="tab" data-m="fav" aria-pressed="false">Favourites</button></div><div class="rgrid" id="grid"></div>
+<section class="food-hero recipes-hero"><div class="food-hero-copy"><span class="eyebrow">FRESH IDEAS • FEEL-GOOD FOOD</span><h1>Healthy recipes,<br>made for real life.</h1><p>Colourful, nourishing meals built around everyday ingredients. Find your next favourite dish.</p><a class="btn btn-lime" href="pantry.html">Check my pantry <span aria-hidden="true">→</span></a><div class="hero-mini-stats"><span>🥑 Whole ingredients</span><span>⏱️ Easy prep</span><span>🌿 Balanced choices</span></div></div><img class="food-hero-photo" src="assets/food/hero-healthy-bowl.jpg" alt="Fresh healthy grain bowl with chicken and vegetables"></section>
+<div class="recipes-intro"><div><span class="eyebrow">YOUR KITCHEN, YOUR WAY</span><h2>Find something delicious</h2><p class="muted">Recipes are matched to ingredients you already have.</p></div><span class="fresh-badge">🌱 Good food, good mood</span></div><div class="filters recipe-filters"><input class="input" id="q" type="search" placeholder="Search healthy recipes…" aria-label="Search recipes"><button class="tab" data-m="all" aria-pressed="true">All recipes</button><button class="tab" data-m="now" aria-pressed="false">✓ Cook now</button><button class="tab" data-m="fav" aria-pressed="false">♡ Favourites</button></div><div class="rgrid" id="grid"></div>
 </main></div>
 <script src="js/data.js"></script><script src="js/app.js"></script>
 <script>
 const $=id=>document.getElementById(id);
-$("cast").innerHTML=["tomato","broccoli","avocado"].map(k=>char(k,84)).join("");
+const FOOD_IMAGES={1:"assets/food/chicken-quinoa.jpg",2:"assets/food/lentil-soup.jpg",3:"assets/food/salad-bowl.jpg",4:"assets/food/avocado-toast.jpg",5:"assets/food/avocado-toast.jpg",6:"assets/food/salad-bowl.jpg",7:"assets/food/lentil-soup.jpg",8:"assets/food/chicken-quinoa.jpg"};
 
 let mode="all",favs=_l("vp_fav",[]),rate=_l("vp_rate",{});
 function draw(){const q=$("q").value.toLowerCase();
  const L=R.filter(r=>dietOk(r)&&r.name.toLowerCase().includes(q)&&(mode=="all"||(mode=="fav"&&favs.includes(r.id))||(mode=="now"&&matchPct(r)>=60))).sort((a,b)=>matchPct(b)-matchPct(a));
- $("grid").innerHTML=L.length?L.map(r=>`<article class="rcard"><button class="heart" data-f="${r.id}" aria-pressed="${favs.includes(r.id)}" aria-label="Favourite">${favs.includes(r.id)?"❤️":"🤍"}</button><div class="art">${char(r.kind,96)}</div><h3>${r.name}</h3>
+ $("grid").innerHTML=L.length?L.map(r=>`<article class="rcard"><div class="recipe-photo-wrap"><img class="recipe-photo" src="${FOOD_IMAGES[r.id]||"assets/food/salad-bowl.jpg"}" alt="Healthy ${r.name}" loading="lazy"><span class="photo-label">🌿 Nourishing pick</span><button class="heart" data-f="${r.id}" aria-pressed="${favs.includes(r.id)}" aria-label="Favourite">${favs.includes(r.id)?"❤️":"🤍"}</button></div><div class="recipe-card-body"><h3>${r.name}</h3>
  <div class="meta"><span class="chip">${matchPct(r)}% in pantry</span><span class="chip warn">${r.kcal} kcal</span><span class="chip is-off">${r.time} min</span></div>
  <div class="muted" style="font-size:.85rem">P ${r.p}g · C ${r.c}g · F ${r.f}g</div>
  <div class="stars">${[1,2,3,4,5].map(n=>`<button class="${n<=(rate[r.id]||0)?"on":""}" data-r="${r.id}:${n}" aria-label="${n} stars">★</button>`).join("")}</div>
- <div class="row"><button class="btn btn-primary btn-sm" data-plan="${r.id}">Add to plan</button><button class="btn btn-ghost btn-sm" data-shop="${r.id}">Missing to list</button></div></article>`).join(""):
- `<div class="card" style="grid-column:1/-1;text-align:center">${char("egg",90)}<h3>Nothing here yet</h3><p class="muted">Try another filter or add items to your pantry.</p></div>`}
+ <div class="row recipe-actions"><button class="btn btn-primary btn-sm" data-plan="${r.id}">Add to plan</button><button class="btn btn-ghost btn-sm" data-shop="${r.id}">Missing to list</button></div></div></article>`).join(""):
+ `<div class="card recipe-empty" style="grid-column:1/-1;text-align:center"><img src="assets/food/salad-bowl.jpg" alt="Fresh healthy salad"><h3>Nothing here yet</h3><p class="muted">Try another filter or add items to your pantry.</p></div>`}
 document.addEventListener("click",e=>{const d=e.target.dataset;
  if(d.m){mode=d.m;document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-pressed",t.dataset.m==mode))}
  else if(d.f){const i=+d.f;favs=favs.includes(i)?favs.filter(x=>x!=i):[...favs,i];_s("vp_fav",favs)}
