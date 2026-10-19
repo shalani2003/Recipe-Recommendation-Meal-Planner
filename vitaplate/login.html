@@ -9,15 +9,37 @@
     <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="css/auth.css">
 </head>
+<<<<<<< HEAD
 <body class="auth auth-slideshow-page">
     <aside class="auth-art">
         <div class="auth-slideshow" aria-label="Healthy meal planning photos">
             <img src="assets/1.jpg" alt="Meal planner inspiration" class="active">
             <img src="assets/2.jpg" alt="Healthy prepared meals">
             <img src="assets/3.jpg" alt="Family preparing a meal">
+=======
+<body class="auth">
+    
+    <!-- Left Side: Slideshow -->
+    <aside class="auth-art">
+        <div class="slideshow-container">
+            <img src="images/img1.jpeg" class="slide active" alt="Healthy Lifestyle">
+            <img src="images/img2.jpeg" class="slide" alt="Cooking together">
+            <img src="images/img3.jpeg" class="slide" alt="Meal planner">
+            <img src="images/img4.jpeg" class="slide" alt="Family preparing food">
+            <img src="images/img5.jpeg" class="slide" alt="Meal prep">
+            <img src="images/img6.jpeg" class="slide" alt="Healthy eating collage">
+             <img src="images/img7.jpeg" class="slide" alt="Healthy eating collage">
+        </div>
+
+        <div class="auth-content">
+            <img src="assets/logo.jpeg" alt="VitaPlate logo" class="logo">
+            <h1>Welcome back</h1>
+            <p>Log in to see your pantry, recipes and weekly meal plan.</p>
+>>>>>>> 0fe25625fcd21d965113cdf50fc4032138afecad
         </div>
     </aside>
 
+    <!-- Right Side: Login Form -->
     <main class="auth-form">
         <img class="auth-logo" src="assets/logo.jpeg" alt="VitaPlate logo">
         <div class="auth-intro">
@@ -28,32 +50,53 @@
             <h2 style="font-size:1.7rem">Log in</h2>
             <p class="sub">Good to see you again.</p>
             
-            <!-- Error Alert Box -->
-            <div class="alert" id="alert" role="alert" aria-live="assertive"></div>
-
+            <div class="alert" id="alert" role="alert"></div>
+            
             <form id="loginForm" novalidate style="display:flex;flex-direction:column;gap:14px">
                 <label class="field">Email
-                    <input class="input" id="email" type="email" autocomplete="email" aria-describedby="emailErr">
-                    <div class="err" id="emailErr" aria-live="polite"></div>
+                    <input class="input" id="email" type="email" autocomplete="email">
+                    <div class="err" id="emailErr"></div>
                 </label>
                 
                 <label class="field">Password
                     <div class="pw">
-                        <input class="input" id="pw" type="password" autocomplete="current-password" aria-describedby="pwErr">
-                        <!-- Show/Hide Button -->
-                        <button type="button" data-pw="pw" aria-label="Show password" aria-pressed="false">Show</button>
+                        <input class="input" id="pw" type="password" autocomplete="current-password">
+                        <button type="button" data-pw="pw">Show</button>
                     </div>
-                    <div class="err" id="pwErr" aria-live="polite"></div>
+                    <div class="err" id="pwErr"></div>
                 </label>
                 
                 <button class="btn btn-primary" type="submit">Log in</button>
             </form>
+<<<<<<< HEAD
             <p class="switch"><a href="reset-password.html">Forgot your password?</a></p>
+=======
+            
+>>>>>>> 0fe25625fcd21d965113cdf50fc4032138afecad
             <p class="switch">New to VitaPlate? <a href="register.html">Create an account</a></p>
         </div>
     </main>
 
     <script src="js/data.js"></script>
     <script src="js/auth.js"></script>
+<<<<<<< HEAD
+=======
+    
+    <!-- Slideshow Script -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const slides = document.querySelectorAll('.slide');
+            let currentSlide = 0;
+
+            if (slides.length > 0) {
+                setInterval(() => {
+                    slides[currentSlide].classList.remove('active');
+                    currentSlide = (currentSlide + 1) % slides.length;
+                    slides[currentSlide].classList.add('active');
+                }, 3000); 
+            }
+        });
+    </script>
+>>>>>>> 0fe25625fcd21d965113cdf50fc4032138afecad
 </body>
 </html>
