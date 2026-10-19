@@ -1,11 +1,19 @@
 /* Login + Register */
 body.auth{display:grid;grid-template-columns:1fr 1fr;min-height:100vh;background:var(--bg)}
 .auth-art{background:var(--leaf);color:#fff;padding:48px;display:flex;flex-direction:column;justify-content:center;gap:20px;position:relative;overflow:hidden}
-.auth-art img{width:150px;height:150px;border-radius:50%;object-fit:cover;object-position:center 40%;border:4px solid var(--lime)}
-.auth-art h1{color:#fff;font-size:2.3rem;max-width:14ch}.auth-art p{color:#cfe8c8;max-width:40ch}
-.auth-art .cast{display:flex;gap:4px;align-items:flex-end;margin-top:10px}
+.auth-slideshow-page .auth-art{background:transparent}
+.auth-slideshow-page .auth-art h1,.auth-slideshow-page .auth-art p{position:relative;z-index:2}
+.auth-slideshow-page .auth-art h1{color:#fff;font-size:2.3rem;max-width:14ch}.auth-slideshow-page .auth-art p{color:#fff;max-width:40ch}
+.auth-slideshow{position:absolute;width:min(100%,100vh);aspect-ratio:1;margin:0;left:50%;top:50%;transform:translate(-50%,-50%);overflow:hidden;z-index:0}
+.auth-slideshow img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;position:absolute;inset:0;opacity:0;transition:opacity .8s ease}
+.auth-slideshow img.active{opacity:1}
 .auth-art::after{content:"🌿";position:absolute;right:-20px;top:-20px;font-size:10rem;opacity:.12}
-.auth-form{display:grid;place-items:center;padding:32px}
+.auth-form{display:grid;place-items:center;padding:32px;position:relative}
+.auth-logo{width:92px;height:92px;border-radius:50%;object-fit:cover;object-position:center 40%;border:2px solid var(--olive);position:absolute;top:24px;right:24px;z-index:2}
+.auth-intro{width:100%;max-width:420px;margin-bottom:-2px}
+.auth-intro h1{font:700 clamp(2rem,3vw,2.8rem) var(--font-h);color:var(--olive-dk);margin:0 0 8px;letter-spacing:-.03em;animation:introReveal .7s ease-out both}
+.auth-intro p{font:500 1rem var(--font-b);color:var(--muted);margin:0;max-width:36ch;line-height:1.5;animation:introReveal .7s .18s ease-out both}
+@keyframes introReveal{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 .auth-card{width:100%;max-width:420px;display:flex;flex-direction:column;gap:14px}
 .auth-card .sub{color:var(--muted)}
 .pw{position:relative}.pw button{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:none;cursor:pointer;color:var(--olive-dk);font:600 .8rem var(--font-b);padding:6px}
@@ -17,4 +25,4 @@ body.auth{display:grid;grid-template-columns:1fr 1fr;min-height:100vh;background
 .check{display:flex;gap:10px;align-items:flex-start;font-size:.9rem}.check input{width:18px;height:18px;accent-color:var(--olive);margin-top:2px}
 .auth-card .btn-primary{padding:13px}
 .switch{text-align:center}.switch a{color:var(--olive-dk);font-weight:700;text-decoration:underline}
-@media(max-width:820px){body.auth{grid-template-columns:1fr}.auth-art{padding:28px;gap:12px}.auth-art img{width:90px;height:90px}.auth-art h1{font-size:1.6rem}.auth-art .cast{display:none}}
+@media(max-width:820px){body.auth{grid-template-columns:1fr}.auth-art{padding:28px;gap:12px}.auth-slideshow-page .auth-art{min-height:420px}.auth-logo{width:68px;height:68px;top:18px;right:18px}.auth-intro h1{font-size:2rem}}
