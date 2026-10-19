@@ -1,26 +1,299 @@
-<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Meal planner - VitaPlate</title>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css"><link rel="stylesheet" href="css/theme.css"></head>
-<body data-page="planner.html" data-title="Meal planner">
-<div class="main"><main class="content">
-<section class="hero"><div><h1>Your week on a plate</h1><p>Pick meals or auto-generate a week that fits your diet. Nutrition totals update live.</p><button class="btn btn-lime" id="auto">Auto-generate week</button> <button class="btn btn-ghost" id="clr" style="color:#fff;border-color:#ffffff66">Clear</button></div><div class="cast" id="cast"></div></section>
-<section class="card" style="margin-bottom:20px"><div class="card-head"><h2>Week totals</h2><span class="muted" id="wk"></span></div><div class="grid g-3" id="tot"></div></section><div class="days" id="days"></div>
-</main></div>
-<script src="js/data.js"></script><script src="js/app.js"></script>
-<script>
-const $=id=>document.getElementById(id);
-$("cast").innerHTML=["bowl","carrot","egg"].map(k=>char(k,84)).join("");
 
-const get=()=>_l("vp_plan",{}),goal=VP.user.goalKcal;
-function draw(){const p=get();let T={kcal:0,p:0,c:0,f:0};
- $("days").innerHTML=DAYS.map(d=>{let k=0;const sel=MEALS.map(m=>{const id=(p[d]||{})[m],r=R.find(x=>x.id==id);if(r){k+=r.kcal;T.kcal+=r.kcal;T.p+=r.p;T.c+=r.c;T.f+=r.f}
-  return `<label class="muted" style="font-size:.8rem">${m}<select data-d="${d}" data-m="${m}"><option value="">Choose…</option>${R.filter(dietOk).map(x=>`<option value="${x.id}" ${x.id==id?"selected":""}>${x.name}</option>`).join("")}</select></label>`}).join("");
-  return `<article class="day"><h3>${d}<span class="chip ${k>goal?"warn":""}">${k} kcal</span></h3>${sel}<div class="bar"><i style="--v:${Math.min(k/goal*100,100)}%"></i></div></article>`}).join("");
- const w=goal*7;$("wk").textContent=T.kcal+" of "+w+" kcal";
- $("tot").innerHTML=[["Calories",T.kcal,w,"var(--olive)","kcal"],["Protein",T.p,90*7,"var(--sage)","g"],["Carbs",T.c,210*7,"var(--slate)","g"]].map(([n,v,g,c,u])=>`<div class="stat-row"><div><span>${n}</span><span class="muted">${v} / ${g} ${u}</span></div><div class="bar"><i style="--v:${Math.min(v/g*100,100)}%;--c:${c}"></i></div></div>`).join("")+`<div class="muted">Fat ${T.f} g this week</div>`}
-document.addEventListener("change",e=>{const d=e.target.dataset;if(!d.d)return;const p=get();p[d.d]=p[d.d]||{};p[d.d][d.m]=+e.target.value||0;_s("vp_plan",p);draw()});
-$("auto").onclick=()=>{const L=R.filter(dietOk);if(!L.length)return alert("No recipes match your diet filters.");const p={};DAYS.forEach(d=>{p[d]={};MEALS.forEach(m=>p[d][m]=L[Math.floor(Math.random()*L.length)].id)});_s("vp_plan",p);draw()};
-$("clr").onclick=()=>{_s("vp_plan",{});draw()};draw();
-</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Meal Planner - VitaPlate</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap"
+          rel="stylesheet">
+
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/theme.css">
+
+    <style>
+        /* Meal Planner hero section */
+        .hero {
+            position: relative;
+            overflow: hidden;
+            isolation: isolate;
+            min-height: 260px;
+            display: flex;
+            align-items: center;
+            border-radius: 18px;
+        }
+
+        .hero > div:first-child {
+            position: relative;
+            z-index: 2;
+            max-width: 60%;
+        }
+
+        /* Healthy food background image */
+        .meal-hero-image {
+            position: absolute;
+            inset: 0 0 0 auto;
+            width: 48%;
+            height: 100%;
+            background-image:
+                linear-gradient(
+                    90deg,
+                    rgba(245, 250, 241, 0.05),
+                    rgba(245, 250, 241, 0) 40%
+                ),
+                url("images/healthy-meal.jpg");
+            background-size: cover;
+            background-position: center;
+            border-radius: 0 18px 18px 0;
+            z-index: 1;
+        }
+
+        /* Keep hero text readable */
+        .hero::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                90deg,
+                rgba(245, 250, 241, 0.98) 0%,
+                rgba(245, 250, 241, 0.90) 42%,
+                rgba(245, 250, 241, 0.15) 100%
+            );
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .hero > div:first-child {
+            z-index: 2;
+        }
+
+        @media (max-width: 700px) {
+            .hero {
+                min-height: 240px;
+            }
+
+            .hero > div:first-child {
+                max-width: 100%;
+            }
+
+            .meal-hero-image {
+                width: 100%;
+                opacity: 0.3;
+                border-radius: 18px;
+            }
+
+            .hero::after {
+                background: rgba(245, 250, 241, 0.72);
+            }
+        }
+    </style>
+</head>
+
+<body data-page="planner.html" data-title="Meal planner">
+
+<div class="main">
+    <main class="content">
+
+        <!-- Meal Planner Hero -->
+        <section class="hero">
+
+            <div>
+                <h1>Your week on a plate</h1>
+
+                <p>
+                    Pick meals or auto-generate a week that fits your diet.
+                    Nutrition totals update live.
+                </p>
+
+                <button class="btn btn-lime" id="auto">
+                    Auto-generate week
+                </button>
+
+                <button class="btn btn-ghost" id="clr"
+                        style="color:#fff;border-color:#ffffff66">
+                    Clear
+                </button>
+            </div>
+
+            <!-- Healthy food photo replaces the 3 cartoon images -->
+            <div class="meal-hero-image"
+                 role="img"
+                 aria-label="Fresh healthy food, salad and vegetables">
+            </div>
+
+        </section>
+
+        <!-- Weekly Nutrition Totals -->
+        <section class="card" style="margin-bottom:20px">
+
+            <div class="card-head">
+                <h2>Week totals</h2>
+                <span class="muted" id="wk"></span>
+            </div>
+
+            <div class="grid g-3" id="tot"></div>
+
+        </section>
+
+        <!-- Days and Meal Selection -->
+        <div class="days" id="days"></div>
+
+    </main>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+
+<script>
+    const $ = id => document.getElementById(id);
+
+    // Read saved meal plan
+    const get = () => _l("vp_plan", {});
+    const goal = VP.user.goalKcal;
+
+    // Draw the weekly meal planner
+    function draw() {
+        const p = get();
+
+        let T = {
+            kcal: 0,
+            p: 0,
+            c: 0,
+            f: 0
+        };
+
+        $("days").innerHTML = DAYS.map(d => {
+            let k = 0;
+
+            const sel = MEALS.map(m => {
+                const id = (p[d] || {})[m];
+                const r = R.find(x => x.id == id);
+
+                if (r) {
+                    k += r.kcal;
+                    T.kcal += r.kcal;
+                    T.p += r.p;
+                    T.c += r.c;
+                    T.f += r.f;
+                }
+
+                return `
+                    <label class="muted" style="font-size:.8rem">
+                        ${m}
+
+                        <select data-d="${d}" data-m="${m}">
+                            <option value="">Choose…</option>
+
+                            ${R.filter(dietOk).map(x => `
+                                <option value="${x.id}"
+                                    ${x.id == id ? "selected" : ""}>
+                                    ${x.name}
+                                </option>
+                            `).join("")}
+
+                        </select>
+                    </label>
+                `;
+            }).join("");
+
+            return `
+                <article class="day">
+
+                    <h3>
+                        ${d}
+                        <span class="chip ${k > goal ? "warn" : ""}">
+                            ${k} kcal
+                        </span>
+                    </h3>
+
+                    ${sel}
+
+                    <div class="bar">
+                        <i style="--v:${Math.min(k / goal * 100, 100)}%"></i>
+                    </div>
+
+                </article>
+            `;
+        }).join("");
+
+        // Weekly calorie summary
+        const w = goal * 7;
+
+        $("wk").textContent = T.kcal + " of " + w + " kcal";
+
+        // Nutrition summary cards
+        $("tot").innerHTML = [
+            ["Calories", T.kcal, w, "var(--olive)", "kcal"],
+            ["Protein", T.p, 90 * 7, "var(--sage)", "g"],
+            ["Carbs", T.c, 210 * 7, "var(--slate)", "g"]
+        ].map(([n, v, g, c, u]) => `
+            <div class="stat-row">
+
+                <div>
+                    <span>${n}</span>
+                    <span class="muted">${v} / ${g} ${u}</span>
+                </div>
+
+                <div class="bar">
+                    <i style="--v:${Math.min(v / g * 100, 100)}%;--c:${c}"></i>
+                </div>
+
+            </div>
+        `).join("") + `
+            <div class="muted">Fat ${T.f} g this week</div>
+        `;
+    }
+
+    // Save selected meals
+    document.addEventListener("change", e => {
+        const d = e.target.dataset;
+
+        if (!d.d) return;
+
+        const p = get();
+
+        p[d.d] = p[d.d] || {};
+        p[d.d][d.m] = +e.target.value || 0;
+
+        _s("vp_plan", p);
+
+        draw();
+    });
+
+    // Automatically generate meals for the week
+    $("auto").onclick = () => {
+        const L = R.filter(dietOk);
+
+        if (!L.length) {
+            return alert("No recipes match your diet filters.");
+        }
+
+        const p = {};
+
+        DAYS.forEach(d => {
+            p[d] = {};
+
+            MEALS.forEach(m => {
+                p[d][m] = L[Math.floor(Math.random() * L.length)].id;
+            });
+        });
+
+        _s("vp_plan", p);
+
+        draw();
+    };
+
+    // Clear the weekly meal plan
+    $("clr").onclick = () => {
+        _s("vp_plan", {});
+        draw();
+    };
+
+    // Display saved data
+    draw();
+</script>
+
+</body>
+</html>
