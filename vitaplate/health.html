@@ -138,9 +138,16 @@
             const w = +$("w").value;
             const t = +$("t").value;
 
-            // Validation Check
+            // Validation Check: prevent zero, negative, empty and unrealistic values.
+            const rawH = +$("h").value;
+            const rawW = +$("w").value;
+            const rawT = $("t").value.trim() === "" ? null : +$("t").value;
+            if (!Number.isFinite(rawH) || !Number.isFinite(rawW) || rawH < 100 || rawH > 230 || rawW < 25 || rawW > 250 || (rawT !== null && (!Number.isFinite(rawT) || rawT < 25 || rawT > 250))) {
+                $("out").innerHTML = '<p class="muted" role="alert">Enter a height from 100–230 cm and weight from 25–250 kg. Target weight is optional and, if entered, must be 25–250 kg.</p>';
+                return;
+            }
             if (!h || !w) {
-                $("out").innerHTML = '<p class="muted">Enter height and weight.</p>';
+                $("out").innerHTML = '<p class="muted" role="alert">Enter height and weight.</p>';
                 return;
             }
 
