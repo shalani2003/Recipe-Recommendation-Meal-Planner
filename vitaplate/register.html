@@ -11,10 +11,17 @@
 </head>
 <body class="auth">
     <aside class="auth-art">
-        <img src="assets/logo.jpeg" alt="VitaPlate logo">
-        <h1>Nourish. Plan. Thrive.</h1>
-        <p>Create your free account and start planning meals from what you already have at home.</p>
-        <div class="cast" id="cast"></div>
+        <div class="slideshow-container" aria-label="VitaPlate meal planning highlights">
+            <img src="assets/1.jpg" class="slide active" alt="Meal planner artwork">
+            <img src="assets/2.jpg" class="slide" alt="Healthy meal preparation">
+            <img src="assets/3.jpg" class="slide" alt="Family preparing a meal together">
+        </div>
+
+        <div class="auth-content">
+            <img src="assets/logo.jpeg" alt="VitaPlate logo" class="logo">
+            <h1>Nourish. Plan. Thrive.</h1>
+            <p>Create your free account and start planning meals from what you already have at home.</p>
+        </div>
     </aside>
 
     <main class="auth-form">
@@ -67,8 +74,18 @@
     <script src="js/data.js"></script>
     <script src="js/auth.js"></script>
     <script>
-        // Cartoon characters render logic
-        document.getElementById("cast").innerHTML = ["tomato","broccoli","avocado","egg"].map(k=>char(k,80)).join("");
+        document.addEventListener("DOMContentLoaded", () => {
+            const slides = document.querySelectorAll(".slide");
+            let currentSlide = 0;
+
+            if (slides.length > 1) {
+                setInterval(() => {
+                    slides[currentSlide].classList.remove("active");
+                    currentSlide = (currentSlide + 1) % slides.length;
+                    slides[currentSlide].classList.add("active");
+                }, 3000);
+            }
+        });
     </script>
 </body>
 </html>
