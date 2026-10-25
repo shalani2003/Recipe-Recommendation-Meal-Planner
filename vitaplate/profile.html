@@ -97,11 +97,32 @@
                     <input class="input" id="n">
                 </label>
 
+                <label class="field" style="margin-top:12px">
+                    Age
+                    <input class="input" id="age" type="number" min="1" max="120" placeholder="Age in years">
+                </label>
+
                 <!-- Daily calorie goal -->
                 <label class="field" style="margin-top:12px">
                     Daily calorie goal (kcal)
                     <input class="input" id="k"
                            type="number" min="1000" max="4000">
+                </label>
+
+                <div class="grid g-2" style="margin-top:12px">
+                    <label class="field">Height (cm)
+                        <input class="input" id="profileHeight" type="number" min="100" max="230" placeholder="e.g. 165">
+                    </label>
+                    <label class="field">Current weight (kg)
+                        <input class="input" id="profileWeight" type="number" min="25" max="250" placeholder="e.g. 60">
+                    </label>
+                </div>
+
+                <label class="field" style="margin-top:12px">Allergies (comma-separated)
+                    <input class="input" id="allergies" placeholder="e.g. peanuts, eggs">
+                </label>
+                <label class="field" style="margin-top:12px">Infections / health notes
+                    <input class="input" id="infections" placeholder="Enter any relevant notes, or leave blank">
                 </label>
 
                 <!-- Dietary restrictions -->
@@ -151,9 +172,16 @@
         ];
 
         let dt = _l("vp_diets", []);
+        const savedProfile = _l("vp_profile", {});
+        const savedHealth = _l("vp_health", {});
 
         $("n").value = VP.user.name;
         $("k").value = VP.user.goalKcal;
+        $("age").value = savedProfile.age || "";
+        $("allergies").value = savedProfile.allergies || "";
+        $("infections").value = savedProfile.infections || "";
+        $("profileHeight").value = savedHealth.h || "";
+        $("profileWeight").value = savedHealth.w || "";
 
         const dd = () => $("dt").innerHTML = D.map(x =>
             `<button class="tab" data-d="${x}"
@@ -174,19 +202,47 @@
         };
 
         $("sv").onclick = () => {
+            const age = +$("age").value || "";
+            const height = +$("profileHeight").value || 0;
+            const weight = +$("profileWeight").value || 0;
+            if (age && (age < 1 || age > 120)) {
+                $("ok").textContent = "Enter an age between 1 and 120.";
+                return;
+            }
+            if (height && (height < 100 || height > 230)) {
+                $("ok").textContent = "Enter a height between 100 and 230 cm.";
+                return;
+            }
+            if (weight && (weight < 25 || weight > 250)) {
+                $("ok").textContent = "Enter a weight between 25 and 250 kg.";
+                return;
+            }
+
             _s("vp_user", {
-                name: $("n").value || "Friend",
+                ...VP.user,
+                name: $("n").value.trim() || "Friend",
                 goalKcal: +$("k").value || 1800
             });
-
+            _s("vp_profile", {
+                age,
+                allergies: $("allergies").value.trim(),
+                infections: $("infections").value.trim()
+            });
+            if (height || weight) {
+                _s("vp_health", { ...savedHealth, h: height || savedHealth.h || "", w: weight || savedHealth.w || "", t: savedHealth.t || "" });
+            }
             _s("vp_diets", dt);
-
-            $("ok").textContent = "Saved ✓";
+            $("ok").textContent = "Profile saved ✓";
         };
 
         $("rs").onclick = () => {
-            if (confirm("Delete all VitaPlate data in this browser?")) {
-                localStorage.clear();
+            if (confirm("Delete VitaPlate data saved in this browser? Other websites' data will not be changed.")) {
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith("vp_")) keysToRemove.push(key);
+                }
+                keysToRemove.forEach(key => localStorage.removeItem(key));
                 location.reload();
             }
         };
