@@ -4,7 +4,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css"><link rel="stylesheet" href="css/theme.css"><link rel="stylesheet" href="css/auth.css"></head>
 <body class="auth">
-<aside class="auth-art"><img src="assets/logo.jpeg" alt="VitaPlate logo"><h1>Nourish. Plan. Thrive.</h1><p>Create your free account and start planning meals from what you already have at home.</p><div class="cast" id="cast"></div></aside>
+<aside class="auth-art auth-art--slideshow">
+<div class="auth-slideshow" aria-hidden="true">
+<img class="auth-slide is-active" src="assets/1.jpg" alt="">
+<img class="auth-slide" src="assets/2.jpg" alt="">
+<img class="auth-slide" src="assets/3.jpg" alt="">
+</div>
+<div class="auth-art-content"><img src="assets/logo.jpeg" alt="VitaPlate logo"><h1>Nourish. Plan. Thrive.</h1><p>Create your free account and start planning meals from what you already have at home.</p></div>
+</aside>
 <main class="auth-form"><div class="auth-card"><h2 style="font-size:1.7rem">Create account</h2><p class="sub">It takes less than a minute.</p><div class="alert" id="alert" role="alert"></div>
 <form id="regForm" novalidate style="display:flex;flex-direction:column;gap:12px">
 <label class="field">Full name<input class="input" id="name" autocomplete="name"><div class="err" id="nameErr"></div></label>
@@ -15,5 +22,8 @@
 <button class="btn btn-primary" type="submit">Create account</button></form>
 <p class="switch">Already have an account? <a href="login.html">Log in</a></p></div></main>
 <script src="js/data.js"></script><script src="js/auth.js"></script>
-<script>document.getElementById("cast").innerHTML=["tomato","broccoli","avocado","egg"].map(k=>char(k,80)).join("")</script>
+<script>
+const slides=document.querySelectorAll(".auth-slide");let activeSlide=0;
+setInterval(()=>{slides[activeSlide].classList.remove("is-active");activeSlide=(activeSlide+1)%slides.length;slides[activeSlide].classList.add("is-active")},4000);
+</script>
 </body></html>
