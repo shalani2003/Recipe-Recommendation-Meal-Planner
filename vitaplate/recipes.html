@@ -58,6 +58,47 @@
       <!-- Recipe Card Grid Container -->
       <div class="rgrid" id="grid"></div>
 
+      <section class="other-recipes-section" aria-labelledby="other-recipes-title">
+        <div class="other-recipes-heading">
+          <div>
+            <span class="eyebrow">A LITTLE MORE INSPIRATION</span>
+            <h2 id="other-recipes-title">Other Recipes</h2>
+            <p class="muted">Fresh ideas for something delicious today.</p>
+          </div>
+                    <div class="other-recipes-actions">
+            <button class="other-recipes-filter" id="api-cook-now" type="button" aria-pressed="false" title="Show recipes with at least 60% of their ingredients in your pantry">✓ Cook now</button>
+            <span class="other-recipes-badge"><span aria-hidden="true">✦</span> <span id="api-recipe-count">6 recipes</span></span>
+          </div>
+        </div>
+        <div id="api-recipes" class="rgrid"></div>
+      </section>
+
+      <section class="add-recipe-section" aria-labelledby="add-recipe-title">
+        <div class="add-recipe-heading">
+          <span class="eyebrow">YOUR KITCHEN, YOUR IDEAS</span>
+          <h2 id="add-recipe-title">Add a Recipe</h2>
+          <p class="muted">Share a simple favorite with your recipe collection.</p>
+        </div>
+        <form id="add-recipe-form" class="add-recipe-form">
+          <label for="new-recipe-name">Recipe name
+            <input class="input" id="new-recipe-name" name="name" type="text" placeholder="e.g. Vegetable Rice Bowl" required>
+          </label>
+          <label for="new-recipe-ingredients">Ingredients, separated by commas
+            <input class="input" id="new-recipe-ingredients" name="ingredients" type="text" placeholder="e.g. rice, carrot, peas" required>
+          </label>
+          <label class="add-recipe-wide" for="new-recipe-instructions">Instructions
+            <textarea class="input" id="new-recipe-instructions" name="instructions" rows="3" placeholder="Describe how to make it" required></textarea>
+          </label>
+          <label class="add-recipe-wide" for="new-recipe-image">Choose a photo from your computer
+            <input class="input add-recipe-file" id="new-recipe-image" name="imageFile" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required>
+            <span class="add-recipe-help">Choose a JPG, PNG, or WebP photo smaller than 5 MB.</span>
+          </label>
+          <div class="add-recipe-submit add-recipe-wide">
+            <button class="btn btn-primary" type="submit">Save recipe</button>
+            <p id="add-recipe-status" class="muted" role="status" aria-live="polite"></p>
+          </div>
+        </form>
+      </section>
     </main>
   </div>
 
@@ -215,5 +256,168 @@
     $("q").oninput = draw;
     draw();
   </script>
+  <script>
+    const apiRecipeContainer = document.getElementById("api-recipes");
+    const apiRecipeCount = document.getElementById("api-recipe-count");
+    const apiCookNowButton = document.getElementById("api-cook-now");
+    let apiRecipes = [];
+    let apiCookNowOnly = false;
+
+    function getApiPantryMatch(recipe) {
+      const available = recipe.ingredients.filter(haveIng);
+      const missing = recipe.ingredients.filter(ingredient => !haveIng(ingredient));
+      const percentage = recipe.ingredients.length
+        ? Math.round((available.length / recipe.ingredients.length) * 100)
+        : 0;
+      return { available, missing, percentage };
+    }
+
+    function renderApiRecipes(searchText = "") {
+      const query = searchText.trim().toLowerCase();
+      const matches = apiRecipes
+        .filter(recipe => {
+          const searchableText = [recipe.name, ...recipe.ingredients].join(" ").toLowerCase();
+          const matchesSearch = searchableText.includes(query);
+          const pantryMatch = getApiPantryMatch(recipe);
+          return matchesSearch && (!apiCookNowOnly || pantryMatch.percentage >= 60);
+        })
+        .sort((a, b) => getApiPantryMatch(b).percentage - getApiPantryMatch(a).percentage);
+
+      apiRecipeContainer.replaceChildren();
+      apiRecipeCount.textContent = `${matches.length} ${matches.length === 1 ? "recipe" : "recipes"}`;
+
+      if (matches.length === 0) {
+        const emptyMessage = document.createElement("p");
+        emptyMessage.className = "muted api-empty-state";
+        emptyMessage.textContent = apiCookNowOnly
+          ? (query
+              ? `No recipes match “${searchText}” and the pantry filter. Try another search or turn off Cook now.`
+              : "No close pantry matches yet. Add ingredients in Pantry or turn off Cook now.")
+          : (query
+              ? `No other recipes match “${searchText}”. Try a different name or ingredient.`
+              : "There are no other recipes to show yet.");
+        apiRecipeContainer.appendChild(emptyMessage);
+        return;
+      }
+
+      matches.forEach(recipe => {
+        const pantry = getApiPantryMatch(recipe);
+        const card = document.createElement("article");
+        card.className = "rcard";
+
+        if (recipe.image) {
+          const photoWrap = document.createElement("div");
+          photoWrap.className = "recipe-photo-wrap";
+          const photo = document.createElement("img");
+          photo.className = "recipe-photo";
+          photo.src = recipe.image;
+          photo.alt = recipe.name;
+          photo.loading = "lazy";
+          photoWrap.appendChild(photo);
+          card.appendChild(photoWrap);
+        }
+
+        const body = document.createElement("div");
+        body.className = "recipe-card-body";
+        const name = document.createElement("h3");
+        name.textContent = recipe.name;
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        const matchChip = document.createElement("span");
+        matchChip.className = "chip";
+        matchChip.textContent = `${pantry.percentage}% in pantry`;
+        const statusChip = document.createElement("span");
+        statusChip.className = pantry.missing.length ? "chip warn" : "chip";
+        statusChip.textContent = pantry.missing.length ? "Still missing items" : "Ready to cook";
+        meta.append(matchChip, statusChip);
+
+        const ingredients = document.createElement("p");
+        ingredients.textContent = "Ingredients: " + recipe.ingredients.join(", ");
+        const pantryStatus = document.createElement("p");
+        pantryStatus.className = "muted api-pantry-status";
+        pantryStatus.textContent = pantry.missing.length
+          ? `In pantry: ${pantry.available.length ? pantry.available.join(", ") : "none"} · Missing: ${pantry.missing.join(", ")}`
+          : "You have everything needed for this recipe.";
+
+        const instructions = document.createElement("p");
+        instructions.textContent = recipe.instructions;
+        body.append(name, meta, ingredients, pantryStatus, instructions);
+        card.appendChild(body);
+        apiRecipeContainer.appendChild(card);
+      });
+    }
+
+    async function loadApiRecipes() {
+      try {
+        const response = await fetch("/api/recipes");
+        if (!response.ok) throw new Error("The server could not load the recipes.");
+
+        apiRecipes = await response.json();
+        renderApiRecipes(document.getElementById("q").value);
+      } catch (error) {
+        apiRecipeContainer.textContent = "Could not load recipes. Check that the API server is running.";
+        console.error(error);
+      }
+    }
+
+    document.getElementById("q").addEventListener("input", event => {
+      renderApiRecipes(event.target.value);
+    });
+
+    apiCookNowButton.addEventListener("click", () => {
+      apiCookNowOnly = !apiCookNowOnly;
+      apiCookNowButton.setAttribute("aria-pressed", String(apiCookNowOnly));
+      renderApiRecipes(document.getElementById("q").value);
+    });
+
+    window.addEventListener("storage", event => {
+      if (event.key === "vp_pantry") {
+        renderApiRecipes(document.getElementById("q").value);
+      }
+    });
+
+    const addRecipeForm = document.getElementById("add-recipe-form");
+    const addRecipeStatus = document.getElementById("add-recipe-status");
+
+    addRecipeForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      const submitButton = addRecipeForm.querySelector("button[type=submit]");
+      const formValues = new FormData(addRecipeForm);
+      const ingredients = formValues.get("ingredients").split(",").map(item => item.trim()).filter(Boolean);
+      formValues.set("ingredients", ingredients.join(","));
+
+      submitButton.disabled = true;
+      addRecipeStatus.textContent = "Saving your recipe…";
+
+      try {
+        const response = await fetch("/api/recipes", {
+          method: "POST",
+          body: formValues,
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "The recipe could not be saved.");
+
+        apiRecipes.push(result);
+        apiCookNowOnly = false;
+        apiCookNowButton.setAttribute("aria-pressed", "false");
+        addRecipeForm.reset();
+        addRecipeStatus.textContent = `${result.name} was added to Other Recipes.`;
+        renderApiRecipes("");
+      } catch (error) {
+        addRecipeStatus.textContent = error.message;
+      } finally {
+        submitButton.disabled = false;
+      }
+    });
+
+    loadApiRecipes();
+  </script>
 </body>
 </html>
+
+
+
+
+
+
