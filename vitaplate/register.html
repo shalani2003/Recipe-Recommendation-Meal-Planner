@@ -1,77 +1,242 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Register - VitaPlate</title>
+
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="css/auth.css">
+
+    <!-- Slideshow CSS -->
+    <style>
+        .auth-art {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slideshow-container {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .slideshow-container .slide {
+            position: absolute;
+            inset: 0;
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+
+        .slideshow-container .slide.active {
+            opacity: 1;
+        }
+
+        .auth-content {
+            position: relative;
+            z-index: 1;
+        }
+    </style>
 </head>
+
 <body class="auth">
+
     <aside class="auth-art">
-        <div class="slideshow-container" aria-label="VitaPlate meal planning highlights">
-            <img src="assets/1.jpg" class="slide active" alt="Meal planner artwork">
-            <img src="assets/2.jpg" class="slide" alt="Healthy meal preparation">
-            <img src="assets/3.jpg" class="slide" alt="Family preparing a meal together">
+
+        <!-- Slideshow Images -->
+        <div class="slideshow-container"
+             aria-label="VitaPlate meal planning highlights">
+
+            <img src="assets/1.jpg"
+                 class="slide active"
+                 alt="Meal planner artwork">
+
+            <img src="assets/2.jpg"
+                 class="slide"
+                 alt="Healthy meal preparation">
+
+            <img src="assets/3.jpg"
+                 class="slide"
+                 alt="Family preparing a meal together">
+
         </div>
 
         <div class="auth-content">
-            <img src="assets/logo.jpeg" alt="VitaPlate logo" class="logo">
+
+            <img src="assets/logo.jpeg"
+                 alt="VitaPlate logo"
+                 class="logo">
+
             <h1>Nourish. Plan. Thrive.</h1>
-            <p>Create your free account and start planning meals from what you already have at home.</p>
+
+            <p>
+                Create your free account and start planning meals
+                from what you already have at home.
+            </p>
+
         </div>
+
     </aside>
 
     <main class="auth-form">
-        <div class="auth-card">
-            <h2 style="font-size:1.7rem">Create account</h2>
-            <p class="sub">It takes less than a minute.</p>
-            
-            <!-- Error Alert Box -->
-            <div class="alert" id="alert" role="alert" aria-live="assertive"></div>
 
-            <form id="regForm" novalidate style="display:flex;flex-direction:column;gap:12px">
-                <label class="field">Full name
-                    <input class="input" id="name" autocomplete="name" aria-describedby="nameErr">
-                    <div class="err" id="nameErr" aria-live="polite"></div>
+        <div class="auth-card">
+
+            <h2 style="font-size:1.7rem">Create account</h2>
+
+            <p class="sub">It takes less than a minute.</p>
+
+            <!-- Error Alert Box -->
+            <div class="alert"
+                 id="alert"
+                 role="alert"
+                 aria-live="assertive"></div>
+
+            <form id="regForm"
+                  novalidate
+                  style="display:flex;flex-direction:column;gap:12px">
+
+                <label class="field">
+                    Full name
+
+                    <input class="input"
+                           id="name"
+                           autocomplete="name"
+                           aria-describedby="nameErr">
+
+                    <div class="err"
+                         id="nameErr"
+                         aria-live="polite"></div>
                 </label>
-                
-                <label class="field">Email
-                    <input class="input" id="email" type="email" autocomplete="email" aria-describedby="emailErr">
-                    <div class="err" id="emailErr" aria-live="polite"></div>
+
+                <label class="field">
+                    Email
+
+                    <input class="input"
+                           id="email"
+                           type="email"
+                           autocomplete="email"
+                           aria-describedby="emailErr">
+
+                    <div class="err"
+                         id="emailErr"
+                         aria-live="polite"></div>
                 </label>
-                
-                <label class="field">Password
+
+                <label class="field">
+                    Password
+
                     <div class="pw">
-                        <input class="input" id="pw" type="password" autocomplete="new-password" aria-describedby="pwErr">
-                        <button type="button" data-pw="pw" aria-label="Show password" aria-pressed="false">Show</button>
+                        <input class="input"
+                               id="pw"
+                               type="password"
+                               autocomplete="new-password"
+                               aria-describedby="pwErr">
+
+                        <button type="button"
+                                data-pw="pw"
+                                aria-label="Show password"
+                                aria-pressed="false">
+                            Show
+                        </button>
                     </div>
-                    <div class="err" id="pwErr" aria-live="polite"></div>
+
+                    <div class="err"
+                         id="pwErr"
+                         aria-live="polite"></div>
                 </label>
-                
-                <label class="field">Confirm password
+
+                <label class="field">
+                    Confirm password
+
                     <div class="pw">
-                        <input class="input" id="pw2" type="password" autocomplete="new-password" aria-describedby="pw2Err">
-                        <button type="button" data-pw="pw2" aria-label="Show confirm password" aria-pressed="false">Show</button>
+                        <input class="input"
+                               id="pw2"
+                               type="password"
+                               autocomplete="new-password"
+                               aria-describedby="pw2Err">
+
+                        <button type="button"
+                                data-pw="pw2"
+                                aria-label="Show confirm password"
+                                aria-pressed="false">
+                            Show
+                        </button>
                     </div>
-                    <div class="err" id="pw2Err" aria-live="polite"></div>
+
+                    <div class="err"
+                         id="pw2Err"
+                         aria-live="polite"></div>
                 </label>
-                
+
                 <!-- Terms Checkbox -->
                 <label class="check">
                     <input type="checkbox" id="terms">
-                    <span>I agree to the terms and privacy policy.</span>
+                    <span>
+                        I agree to the terms and privacy policy.
+                    </span>
                 </label>
-                
-                <button class="btn btn-primary" type="submit">Create account</button>
+
+                <button class="btn btn-primary" type="submit">
+                    Create account
+                </button>
+
             </form>
-            <p class="switch">Already have an account? <a href="login.html">Log in</a></p>
+
+            <p class="switch">
+                Already have an account?
+                <a href="login.html">Log in</a>
+            </p>
+
         </div>
+
     </main>
 
+    <!-- Existing JavaScript Files -->
     <script src="js/data.js"></script>
     <script src="js/auth.js"></script>
+
+    <!-- Automatic Slideshow -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const slides = document.querySelectorAll(
+                ".slideshow-container .slide"
+            );
+
+            if (slides.length === 0) return;
+
+            let currentSlide = 0;
+
+            // Display the first image
+            slides.forEach(function (slide, index) {
+                slide.classList.toggle("active", index === 0);
+            });
+
+            // Change image every 3 seconds
+            setInterval(function () {
+
+                slides[currentSlide].classList.remove("active");
+
+                currentSlide = (currentSlide + 1) % slides.length;
+
+                slides[currentSlide].classList.add("active");
+
+            }, 3000);
+
+        });
+    </script>
+
 </body>
 </html>
