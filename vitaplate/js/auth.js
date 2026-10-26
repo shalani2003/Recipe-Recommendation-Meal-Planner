@@ -11,7 +11,7 @@ async function api(path,payload){
 }
 function fieldErr(id,msg){const el=$(id);el.classList.toggle("bad",!!msg);$(id+"Err").textContent=msg||"";return !msg}
 function showAlert(m,ok){const a=$("alert");a.textContent=m;a.classList.add("show")}
-function startSession(u){_s("vp_session",{email:u.email});_s("vp_user",{..._l("vp_user",{}),name:u.name});location.href="index.html"}
+function startSession(u){const profile=_l("vp_diet_profiles",{})[u.email];_s("vp_session",{email:u.email});_s("vp_user",{..._l("vp_user",{}),name:u.name});_s("vp_diets",profile?.diet==="Vegetarian"?["Vegetarian"]:[]);location.href=profile?.completed?"index.html":"onboarding.html"}
 document.querySelectorAll("[data-pw]").forEach(b=>b.onclick=()=>{const i=$(b.dataset.pw),s=i.type==="password";i.type=s?"text":"password";b.textContent=s?"Hide":"Show"});
 const emailOk=e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 const slideshow=document.querySelector(".auth-slideshow");
@@ -21,7 +21,7 @@ if(slideshow){const slides=slideshow.querySelectorAll("img");let current=0;
 // Already logged in (and the server agrees)? Go to the dashboard.
 if(_l("vp_session",null)){
  fetch("/api/me",{credentials:"same-origin"}).then(async r=>{
-  if(r.ok){location.replace("index.html")}
+    if(r.ok){const d=await r.json().catch(()=>({}));const u=d.user||{};const email=u.email||_l("vp_session",{}).email;const profile=_l("vp_diet_profiles",{})[email];if(u.email)_s("vp_session",{email:u.email});if(u.name)_s("vp_user",{..._l("vp_user",{}),name:u.name});_s("vp_diets",profile?.diet==="Vegetarian"?["Vegetarian"]:[]);location.replace(profile?.completed?"index.html":"onboarding.html")}
   else if(r.status===401){localStorage.removeItem("vp_session")}
  }).catch(()=>{});
 }
@@ -32,6 +32,7 @@ if($("loginForm"))$("loginForm").onsubmit=async e=>{e.preventDefault();$("alert"
  const r=await api("/api/login",{email:em,password:pw});
  if(!r.ok)return showAlert(r.data.error||"Login failed. Please try again.");
  startSession(r.data.user)};
+if($("loginForm")&&new URLSearchParams(location.search).has("registered"))showAlert("Account created. Log in to continue.");
 
 if($("regForm"))$("regForm").onsubmit=async e=>{e.preventDefault();$("alert").classList.remove("show");
  const n=$("name").value.trim(),em=$("email").value.trim().toLowerCase(),pw=$("pw").value,c=$("pw2").value;
@@ -41,7 +42,7 @@ if($("regForm"))$("regForm").onsubmit=async e=>{e.preventDefault();$("alert").cl
  if(ok.includes(false))return;
  const r=await api("/api/register",{name:n,email:em,password:pw});
  if(!r.ok)return showAlert(r.data.error||"Registration failed. Please try again.");
- startSession(r.data.user)};
+ location.href="login.html?registered=1"};
 
 if($("resetForm"))$("resetForm").onsubmit=async e=>{e.preventDefault();$("alert").classList.remove("show");
  const em=$("email").value.trim().toLowerCase(),pw=$("pw").value,c=$("pw2").value;
