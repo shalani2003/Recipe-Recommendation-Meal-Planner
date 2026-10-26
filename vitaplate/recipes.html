@@ -350,7 +350,7 @@
 
     async function loadApiRecipes() {
       try {
-        const response = await fetch("/api/recipes");
+        const response = await fetch("http://localhost:3000/api/recipes");
         if (!response.ok) throw new Error("The server could not load the recipes.");
 
         apiRecipes = await response.json();
@@ -391,7 +391,7 @@
       addRecipeStatus.textContent = "Saving your recipe…";
 
       try {
-        const response = await fetch("/api/recipes", {
+        const response = await fetch("http://localhost:3000/api/recipes", {
           method: "POST",
           body: formValues,
         });
