@@ -238,7 +238,7 @@
         const r = R.find(x => x.id == d.shop);
         const s = _l("vp_shop", []);
         r.ing.filter(i => !haveIng(i)).forEach(i => {
-          if (!s.some(x => x.name === i)) {
+          if (!s.some(x => ingredientMatches(x.name, i))) {
             s.push({ id: Math.random(), name: i, done: false });
           }
         });
@@ -279,7 +279,7 @@
           const searchableText = [recipe.name, ...recipe.ingredients].join(" ").toLowerCase();
           const matchesSearch = searchableText.includes(query);
           const pantryMatch = getApiPantryMatch(recipe);
-          return matchesSearch && (!apiCookNowOnly || pantryMatch.percentage >= 60);
+          return dietOk(recipe) && matchesSearch && (!apiCookNowOnly || pantryMatch.percentage >= 60);
         })
         .sort((a, b) => getApiPantryMatch(b).percentage - getApiPantryMatch(a).percentage);
 

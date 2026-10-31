@@ -106,7 +106,7 @@
 
                     <label class="field" style="grid-column: 1 / -1;">
                         Target weight (kg)
-                        <input class="input" id="t" type="number" min="25" max="250">
+                        <input class="input" id="t" type="number" min="25" max="250" step="any" aria-describedby="targetError">
                     </label>
                 </div>
 
@@ -129,36 +129,55 @@
         const $ = id => document.getElementById(id);
 
         // Load Saved Values from Local Storage
-        const u = _l("vp_health", {});
+        const u = readHealth();
         ["h", "w", "t"].forEach(k => $(k).value = u[k] || "");
 
-        // Calculate BMI & Weight Difference
+        const numberInRange = (value, limits) => Number.isFinite(value) && value >= limits.min && value <= limits.max;
+
+        // Calculate BMI and keep the optional target from affecting invalid results.
         function calc() {
-            const h = +$("h").value / 100;
-            const w = +$("w").value;
-            const t = +$("t").value;
+            const heightText = $("h").value.trim();
+            const weightText = $("w").value.trim();
+            const targetText = $("t").value.trim();
+            const heightCm = Number(heightText);
+            const weightKg = Number(weightText);
+            const targetKg = targetText ? Number(targetText) : null;
 
-            // Validation Check: prevent zero, negative, empty and unrealistic values.
-            const rawH = +$("h").value;
-            const rawW = +$("w").value;
-            const rawT = $("t").value.trim() === "" ? null : +$("t").value;
-            if (!Number.isFinite(rawH) || !Number.isFinite(rawW) || rawH < 100 || rawH > 230 || rawW < 25 || rawW > 250 || (rawT !== null && (!Number.isFinite(rawT) || rawT < 25 || rawT > 250))) {
-                $("out").innerHTML = '<p class="muted" role="alert">Enter a height from 100–230 cm and weight from 25–250 kg. Target weight is optional and, if entered, must be 25–250 kg.</p>';
-                return;
-            }
-            if (!h || !w) {
-                $("out").innerHTML = '<p class="muted" role="alert">Enter height and weight.</p>';
+            if (!heightText || !weightText || !numberInRange(heightCm, HEALTH_LIMITS.height) || !numberInRange(weightKg, HEALTH_LIMITS.weight)) {
+                $("out").innerHTML = '<p class="muted" role="alert">Enter a valid height from 100–230 cm and weight from 25–250 kg.</p>';
                 return;
             }
 
-            // Save Input Values
-            _s("vp_health", { h: h * 100, w, t });
+            if (targetText && (!numberInRange(targetKg, HEALTH_LIMITS.weight))) {
+                $("out").innerHTML = '<p class="muted" role="alert">Target weight must be between 25 and 250 kg.</p>';
+                return;
+            }
 
-            // BMI Calculation
-            const b = w / (h * h);
+            const heightM = heightCm / 100;
+            const b = weightKg / (heightM * heightM);
+            if (targetKg !== null) {
+                const targetBmi = targetKg / (heightM * heightM);
+                if (!numberInRange(targetBmi, HEALTH_LIMITS.bmi)) {
+                    $("out").innerHTML = `<p class="muted" role="alert">Choose a target that gives a BMI between ${HEALTH_LIMITS.bmi.min} and ${HEALTH_LIMITS.bmi.max} for your height.</p>`;
+                    return;
+                }
+            }
+
+            saveHealth({ h: heightCm, w: weightKg, t: targetKg === null ? "" : targetKg });
+
             const c = b < 18.5 ? "Underweight" : b < 25 ? "Healthy" : b < 30 ? "Overweight" : "Obese";
             const pos = Math.min(Math.max((b - 12) / (40 - 12), 0), 1) * 100;
-            const diff = t ? (w - t) : 0;
+            let journey = "";
+            if (targetKg !== null) {
+                const difference = weightKg - targetKg;
+                if (difference > 0) {
+                    journey = `${difference.toFixed(1)} kg to lose · Weight-loss progress: 0%`;
+                } else if (difference === 0) {
+                    journey = "You are at your target weight · Weight-loss progress: 100%";
+                } else {
+                    journey = `${Math.abs(difference).toFixed(1)} kg to gain · This is not a weight-loss journey.`;
+                }
+            }
 
             // Render Output
             $("out").innerHTML = `
@@ -172,13 +191,7 @@
                     <span>Over</span>
                     <span>Obese</span>
                 </div>
-                ${t ? `
-                    <p style="margin-top: 12px;">
-                        ${diff == 0 
-                            ? "You are at your target weight 🎉" 
-                            : Math.abs(diff).toFixed(1) + " kg to " + (diff > 0 ? "lose" : "gain") + " to reach your target."}
-                    </p>
-                ` : ""}
+                ${journey ? `<p style="margin-top: 12px;">${journey}</p>` : ""}
             `;
         }
 

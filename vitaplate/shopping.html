@@ -222,8 +222,10 @@
 							</svg>
 							To Pantry
 						</button>
+						<button class="btn-premium btn-move" id="build" type="button">Build from meal plan</button>
 						<button class="btn-premium btn-clear" id="clr" type="button" title="Clear List">🗑️</button>
 					</div>
+					<p id="shopStatus" class="muted" role="status" aria-live="polite"></p>
 
 				<div id="list" class="shop-grid"></div>
 
@@ -355,21 +357,14 @@
 				return "https://images.unsplash.com/photo-1542838132-92c53300491e?w=150&h=150&fit=crop";
 				}
 
-				// 6. Initialize with default items if empty
-				if (S.length === 0) {
-				S = sriLankanGroceries.slice(0, 15).map(item => ({
-				id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-				name: item,
-				done: false
-				}));
-				save();
-				}
+				const status = message => $("shopStatus").textContent = message;
 
-				// 7. Render Function
+				// 6. Render Function
 				function draw() {
 				const listEl = $("list");
 
 				if (!S.length) {
+					save();
 				listEl.innerHTML = `
 				<div class="empty-state">
 					<img src="https://cdn-icons-png.flaticon.com/512/11329/11329060.png" alt="Empty cart">
@@ -413,22 +408,53 @@
 				save();
 				}
 
-				// 8. Event Listeners
-				$("add").addEventListener("click", () => {
-				const input = $("nm");
-				const val = input.value.trim();
-				if (val && !S.some(x => x.name.toLowerCase() === val.toLowerCase())) {
-				S.push({
-				id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-				name: val,
-				done: false
-				});
-				input.value = "";
-				draw();
-				}
-				});
+				const sameShoppingItem = (left, right) => ingredientMatches(left, right) || normalizeIngredient(left) === normalizeIngredient(right);
+				const addShoppingItem = name => {
+					const existing = S.find(item => sameShoppingItem(item.name, name));
+					if (existing) return false;
+					S.push({id: Date.now().toString() + Math.random().toString(36).substr(0, 5), name, done: false});
+					return true;
+				};
 
-				$("nm").addEventListener("keypress", (e) => { if (e.key === "Enter") $("add").click(); });
+				const addManualItem = () => {
+					const input = $("nm");
+					const value = input.value.trim();
+					if (!value) {
+						status("Enter an item to add.");
+						input.focus();
+						return;
+					}
+					if (!addShoppingItem(value)) {
+						status("That item is already on your list.");
+						input.select();
+						return;
+					}
+					input.value = "";
+					save();
+					draw();
+					status(`${value} added to your list.`);
+				};
+
+				const buildFromMealPlan = () => {
+					const plan = _l("vp_plan", {});
+					const plannedRecipes = Object.values(plan).flatMap(day => Object.values(day || {}))
+						.map(id => R.find(recipe => recipe.id == id)).filter(Boolean);
+					const missing = [...new Set(plannedRecipes.flatMap(recipe => recipe.ing))].filter(ingredient => !haveIng(ingredient));
+					const added = missing.filter(addShoppingItem);
+					save();
+					draw();
+					status(added.length ? `${added.length} missing ingredient${added.length === 1 ? "" : "s"} added.` : "Your shopping list is already up to date.");
+				};
+
+				// 7. Event Listeners
+				$("add").addEventListener("click", addManualItem);
+				$("nm").addEventListener("keydown", event => {
+					if (event.key === "Enter") {
+						event.preventDefault();
+						addManualItem();
+					}
+				});
+				$("build").addEventListener("click", buildFromMealPlan);
 
 				// Move to Pantry
 				$("mv").addEventListener("click", () => {
@@ -461,6 +487,7 @@
 				if (confirm("Clear entire shopping list?")) {
 				S = [];
 				draw();
+				status("Shopping list cleared.");
 				}
 				});
 
@@ -479,6 +506,7 @@
 				const itemId = deleteBtn.getAttribute('data-delete');
 				S = S.filter(i => String(i.id) !== String(itemId));
 				draw();
+				status("Item removed from your list.");
 				}
 				});
 

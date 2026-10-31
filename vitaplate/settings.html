@@ -252,6 +252,8 @@
     <script>
         const $ = id => document.getElementById(id);
         const emailOk = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        const MAX_PROFILE_PICTURE_BYTES = 2 * 1024 * 1024;
+        const PROFILE_PICTURE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
         let profilePicture = "";
 
         const showProfilePicture = picture => {
@@ -268,43 +270,82 @@
             }
         };
 
-        $("profilePicture").onchange = event => {
+        const compressProfilePicture = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error("The profile picture could not be read."));
+            reader.onload = () => {
+                const image = new Image();
+                image.onerror = () => reject(new Error("The selected file is not a valid image."));
+                image.onload = () => {
+                    const maxSide = 640;
+                    const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+                    const canvas = document.createElement("canvas");
+                    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+                    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+                    canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+                    let quality = .82;
+                    let result = canvas.toDataURL("image/jpeg", quality);
+                    while (result.length > MAX_PROFILE_PICTURE_BYTES * 1.37 && quality > .5) {
+                        quality -= .08;
+                        result = canvas.toDataURL("image/jpeg", quality);
+                    }
+                    if (result.length > MAX_PROFILE_PICTURE_BYTES * 1.37) {
+                        reject(new Error("Choose a smaller image."));
+                        return;
+                    }
+                    resolve(result);
+                };
+                image.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        $("profilePicture").onchange = async event => {
             const file = event.target.files[0];
             if (!file) return;
-            if (!file.type.startsWith("image/")) {
-                $("error").textContent = "Choose an image file.";
+            if (!PROFILE_PICTURE_TYPES.has(file.type)) {
+                $("error").textContent = "Choose a JPG, PNG, or WebP image.";
                 event.target.value = "";
                 return;
             }
-            if (file.size > 2 * 1024 * 1024) {
+            if (file.size > MAX_PROFILE_PICTURE_BYTES) {
                 $("error").textContent = "Choose an image smaller than 2 MB.";
                 event.target.value = "";
                 return;
             }
 
-            const reader = new FileReader();
-            reader.onload = () => {
-                profilePicture = reader.result;
+            try {
+                profilePicture = await compressProfilePicture(file);
                 showProfilePicture(profilePicture);
                 $("error").textContent = "";
-            };
-            reader.onerror = () => {
-                $("error").textContent = "The profile picture could not be read.";
+            } catch (error) {
+                profilePicture = "";
+                showProfilePicture(profilePicture);
+                $("error").textContent = error.message || "The profile picture could not be processed.";
                 event.target.value = "";
-            };
-            reader.readAsDataURL(file);
+            }
         };
 
         $("resetProfilePicture").onclick = () => {
             if (!profilePicture || !window.confirm("Delete your current profile picture?")) return;
 
-            profilePicture = "";
-            $("profilePicture").value = "";
-            showProfilePicture(profilePicture);
-            account.profilePicture = "";
-            _s("vp_users", accountList);
-            _s("vp_user", { ..._l("vp_user", {}), profilePicture: "" });
-            $("saved").textContent = "Profile picture deleted";
+            try {
+                profilePicture = "";
+                const user = { ..._l("vp_user", {}), profilePicture: "" };
+                _s("vp_user", user);
+                if (accountRecord) {
+                    accountRecord.profilePicture = "";
+                    _s("vp_users", accountList);
+                }
+                VP.user.profilePicture = "";
+                updateShellAvatar();
+                $("profilePicture").value = "";
+                showProfilePicture(profilePicture);
+                $("saved").textContent = "Profile picture deleted";
+                $("error").textContent = "";
+            } catch {
+                $("error").textContent = "The profile picture could not be deleted. Try again.";
+            }
         };
 
         const hash = async value => {
@@ -319,20 +360,23 @@
 
         const session = _l("vp_session", null);
         const accountList = _l("vp_users", []);
-        const account = session && accountList.find(user => user.email === session.email);
-        const preferences = _l("vp_settings", {
+        const accountRecord = session && accountList.find(user => user.email === session.email);
+        const storedUser = _l("vp_user", {});
+        const account = accountRecord || (session ? {email: session.email, name: storedUser.name || "Friend", profilePicture: storedUser.profilePicture || ""} : null);
+        const preferences = {
             notificationMode: "all",
             mealReminders: true,
-            weeklySummary: true
-        });
+            weeklySummary: true,
+            ..._l("vp_settings", {})
+        };
 
         if (!account) {
             location.replace("login.html");
         } else {
-            profilePicture = _l("vp_user", {}).profilePicture || account.profilePicture || "";
+            profilePicture = storedUser.profilePicture || account.profilePicture || "";
             showProfilePicture(profilePicture);
             $("name").value = account.name;
-            $("email").value = account.email;
+            $("email").value = session.email;
             $("notificationMode").value = preferences.notificationMode;
             $("mealReminders").checked = preferences.mealReminders;
             $("weeklySummary").checked = preferences.weeklySummary;
@@ -355,31 +399,47 @@
                 $("error").textContent = "Enter a valid email address.";
                 return;
             }
-            if (accountList.some(user => user.email === email && user !== account)) {
+            if (accountList.some(user => user.email === email && user !== accountRecord)) {
                 $("error").textContent = "That email is already in use.";
+                return;
+            }
+            if (newPassword && !accountRecord) {
+                $("error").textContent = "Password changes are unavailable until your account record is loaded.";
                 return;
             }
             if (newPassword && (!currentPassword || newPassword.length < 8 || !/\d/.test(newPassword))) {
                 $("error").textContent = "Use your current password and a new password with 8+ characters and one number.";
                 return;
             }
-            if (newPassword && account.hash !== await hash(currentPassword)) {
+            if (newPassword && accountRecord.hash !== await hash(currentPassword)) {
                 $("error").textContent = "Current password is incorrect.";
                 return;
             }
 
-            account.name = name;
-            account.email = email;
-            account.profilePicture = profilePicture;
-            if (newPassword) account.hash = await hash(newPassword);
-            _s("vp_users", accountList);
-            _s("vp_session", { email });
-            _s("vp_user", { ..._l("vp_user", {}), name, profilePicture });
-            _s("vp_settings", {
+            const user = { ..._l("vp_user", {}), name, profilePicture };
+            const nextPreferences = {
                 notificationMode: $("notificationMode").value,
                 mealReminders: $("mealReminders").checked,
                 weeklySummary: $("weeklySummary").checked
-            });
+            };
+            const newHash = newPassword ? await hash(newPassword) : "";
+            const nextAccounts = accountRecord ? accountList.map(item => item === accountRecord
+                ? {...item, name, email, profilePicture, ...(newHash ? {hash: newHash} : {})}
+                : item) : accountList;
+
+            try {
+                _s("vp_user", user);
+                _s("vp_session", { email });
+                if (accountRecord) _s("vp_users", nextAccounts);
+                _s("vp_settings", nextPreferences);
+                VP.user.name = name;
+                VP.user.profilePicture = profilePicture;
+                updateShellName(name);
+                updateShellAvatar();
+            } catch {
+                $("error").textContent = "Settings could not be saved. The image may be too large.";
+                return;
+            }
 
             $("currentPassword").value = "";
             $("newPassword").value = "";
