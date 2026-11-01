@@ -252,7 +252,8 @@
     <script>
         const $ = id => document.getElementById(id);
         const emailOk = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-        const MAX_PROFILE_PICTURE_BYTES = 2 * 1024 * 1024;
+        const MAX_PROFILE_PICTURE_BYTES = 256 * 1024;
+        const MAX_PROFILE_PICTURE_INPUT_BYTES = 20 * 1024 * 1024;
         const PROFILE_PICTURE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
         let profilePicture = "";
 
@@ -277,7 +278,7 @@
                 const image = new Image();
                 image.onerror = () => reject(new Error("The selected file is not a valid image."));
                 image.onload = () => {
-                    const maxSide = 640;
+                    const maxSide = 512;
                     const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
                     const canvas = document.createElement("canvas");
                     canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
@@ -285,12 +286,12 @@
                     canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
                     let quality = .82;
                     let result = canvas.toDataURL("image/jpeg", quality);
-                    while (result.length > MAX_PROFILE_PICTURE_BYTES * 1.37 && quality > .5) {
-                        quality -= .08;
+                    while (result.length > MAX_PROFILE_PICTURE_BYTES * 1.37 && quality > .35) {
+                        quality -= .07;
                         result = canvas.toDataURL("image/jpeg", quality);
                     }
                     if (result.length > MAX_PROFILE_PICTURE_BYTES * 1.37) {
-                        reject(new Error("Choose a smaller image."));
+                        reject(new Error("The image could not be compressed enough for browser storage."));
                         return;
                     }
                     resolve(result);
@@ -308,8 +309,8 @@
                 event.target.value = "";
                 return;
             }
-            if (file.size > MAX_PROFILE_PICTURE_BYTES) {
-                $("error").textContent = "Choose an image smaller than 2 MB.";
+            if (file.size > MAX_PROFILE_PICTURE_INPUT_BYTES) {
+                $("error").textContent = "Choose an image smaller than 20 MB.";
                 event.target.value = "";
                 return;
             }
@@ -428,6 +429,7 @@
                 : item) : accountList;
 
             try {
+                saveUserName(name);
                 _s("vp_user", user);
                 _s("vp_session", { email });
                 if (accountRecord) _s("vp_users", nextAccounts);

@@ -96,17 +96,20 @@
                 <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <label class="field">
                         Height (cm)
-                        <input class="input" id="h" type="number" min="100" max="230">
+                        <input class="input" id="h" type="number" min="100" max="230" step="any" aria-describedby="heightError">
+                        <p class="profile-error" id="heightError" role="alert"></p>
                     </label>
 
                     <label class="field">
                         Weight (kg)
-                        <input class="input" id="w" type="number" min="25" max="250">
+                        <input class="input" id="w" type="number" min="25" max="250" step="any" aria-describedby="weightError">
+                        <p class="profile-error" id="weightError" role="alert"></p>
                     </label>
 
                     <label class="field" style="grid-column: 1 / -1;">
                         Target weight (kg)
                         <input class="input" id="t" type="number" min="25" max="250" step="any" aria-describedby="targetError">
+                                <p class="profile-error" id="targetError" role="alert"></p>
                     </label>
                 </div>
 
@@ -130,7 +133,10 @@
 
         // Load Saved Values from Local Storage
         const u = readHealth();
-        ["h", "w", "t"].forEach(k => $(k).value = u[k] || "");
+        const profile = _l("vp_profile", {});
+        $("h").value = u.h ?? profile.height ?? "";
+        $("w").value = u.w ?? profile.weight ?? "";
+        $("t").value = u.t ?? "";
 
         const numberInRange = (value, limits) => Number.isFinite(value) && value >= limits.min && value <= limits.max;
 
@@ -143,35 +149,68 @@
             const weightKg = Number(weightText);
             const targetKg = targetText ? Number(targetText) : null;
 
-            if (!heightText || !weightText || !numberInRange(heightCm, HEALTH_LIMITS.height) || !numberInRange(weightKg, HEALTH_LIMITS.weight)) {
-                $("out").innerHTML = '<p class="muted" role="alert">Enter a valid height from 100–230 cm and weight from 25–250 kg.</p>';
+            $("heightError").textContent = !heightText
+                ? "Height is required."
+                : !numberInRange(heightCm, HEALTH_LIMITS.height)
+                  ? "Height must be between 100 and 230 cm."
+                  : "";
+            $("weightError").textContent = !weightText
+                ? "Weight is required."
+                : !numberInRange(weightKg, HEALTH_LIMITS.weight)
+                  ? "Weight must be between 25 and 250 kg."
+                  : "";
+            $("targetError").textContent = "";
+
+            if ($("heightError").textContent || $("weightError").textContent) {
+                $("out").innerHTML = "";
                 return;
             }
 
             if (targetText && (!numberInRange(targetKg, HEALTH_LIMITS.weight))) {
-                $("out").innerHTML = '<p class="muted" role="alert">Target weight must be between 25 and 250 kg.</p>';
+                $("targetError").textContent = "Target weight must be between 25 and 250 kg.";
+                $("out").innerHTML = "";
                 return;
             }
 
             const heightM = heightCm / 100;
             const b = weightKg / (heightM * heightM);
+            const roundedBmi = Number(b.toFixed(1));
+            const savedHealth = readHealth();
+            const journeyStartWeight = targetKg === null
+                ? ""
+                : savedHealth.t === targetKg && Number.isFinite(savedHealth.startWeight)
+                  ? savedHealth.startWeight
+                  : weightKg;
             if (targetKg !== null) {
                 const targetBmi = targetKg / (heightM * heightM);
                 if (!numberInRange(targetBmi, HEALTH_LIMITS.bmi)) {
-                    $("out").innerHTML = `<p class="muted" role="alert">Choose a target that gives a BMI between ${HEALTH_LIMITS.bmi.min} and ${HEALTH_LIMITS.bmi.max} for your height.</p>`;
+                    const safeMin = (HEALTH_LIMITS.bmi.min * heightM * heightM).toFixed(1);
+                    const safeMax = (HEALTH_LIMITS.bmi.max * heightM * heightM).toFixed(1);
+                    $("targetError").textContent = `Choose a safe target between ${safeMin} and ${safeMax} kg (BMI ${HEALTH_LIMITS.bmi.min}–${HEALTH_LIMITS.bmi.max}).`;
+                    $("out").innerHTML = "";
                     return;
                 }
             }
 
-            saveHealth({ h: heightCm, w: weightKg, t: targetKg === null ? "" : targetKg });
+            saveHealth({
+                h: heightCm,
+                w: weightKg,
+                t: targetKg === null ? "" : targetKg,
+                startWeight: journeyStartWeight
+            });
 
-            const c = b < 18.5 ? "Underweight" : b < 25 ? "Healthy" : b < 30 ? "Overweight" : "Obese";
+            const c = roundedBmi < 18.5 ? "Underweight" : roundedBmi < 25 ? "Healthy" : roundedBmi < 30 ? "Overweight" : "Obese";
             const pos = Math.min(Math.max((b - 12) / (40 - 12), 0), 1) * 100;
             let journey = "";
             if (targetKg !== null) {
                 const difference = weightKg - targetKg;
                 if (difference > 0) {
-                    journey = `${difference.toFixed(1)} kg to lose · Weight-loss progress: 0%`;
+                    const totalToLose = journeyStartWeight - targetKg;
+                    const lost = journeyStartWeight - weightKg;
+                    const progress = totalToLose > 0
+                        ? Math.min(Math.max(lost / totalToLose * 100, 0), 100)
+                        : 0;
+                    journey = `${difference.toFixed(1)} kg to lose · Weight-loss progress: ${Math.round(progress)}%`;
                 } else if (difference === 0) {
                     journey = "You are at your target weight · Weight-loss progress: 100%";
                 } else {
@@ -181,7 +220,7 @@
 
             // Render Output
             $("out").innerHTML = `
-                <h2>BMI ${b.toFixed(1)} <span class="chip">${c}</span></h2>
+                <h2>BMI ${roundedBmi.toFixed(1)} <span class="chip">${c}</span></h2>
                 <div class="bmi-scale">
                     <i style="left: ${pos}%"></i>
                 </div>

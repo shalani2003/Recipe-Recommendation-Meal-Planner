@@ -157,6 +157,7 @@
 
     // Read saved meal plan
     const get = () => _l("vp_plan", {});
+    const recipes = () => [...R, ..._l("vp_recipe_catalog", [])];
     const goal = VP.user.goalKcal;
 
     // Draw the weekly meal planner
@@ -175,7 +176,7 @@
 
             const sel = MEALS.map(m => {
                 const id = (p[d] || {})[m];
-                const r = R.find(x => x.id == id);
+                const r = recipes().find(x => String(x.id) === String(id));
 
                 if (r) {
                     k += r.kcal;
@@ -192,7 +193,7 @@
                         <select data-d="${d}" data-m="${m}">
                             <option value="">Choose…</option>
 
-                            ${R.filter(dietOk).map(x => `
+                            ${recipes().filter(dietOk).map(x => `
                                 <option value="${x.id}"
                                     ${x.id == id ? "selected" : ""}>
                                     ${x.name}
@@ -270,7 +271,7 @@
 
     // Automatically generate meals for the week
     $("auto").onclick = () => {
-        const L = R.filter(dietOk);
+        const L = recipes().filter(dietOk);
 
         if (!L.length) {
             return alert("No recipes match your diet filters.");

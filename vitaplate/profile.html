@@ -111,11 +111,11 @@
                     <p class="profile-error" id="ageError" role="alert"></p>
                 </label>
 
-                <!-- Daily calorie goal -->
                 <label class="field" style="margin-top:12px">
-                    Daily calorie goal (kcal)
+                    Daily calorie goal (between 1,000 and 4,000 kilocalories per day)
                     <input class="input" id="k"
-                              type="number" min="1000" max="4000" step="1" aria-describedby="calorieError">
+                              type="number" min="1000" max="4000" step="1" aria-describedby="calorieError"
+                              aria-label="Daily calorie goal in kilocalories per day">
                           <p class="profile-error" id="calorieError" role="alert"></p>
                 </label>
 
@@ -192,8 +192,8 @@
         $("age").value = savedProfile.age || "";
         $("allergies").value = savedProfile.allergies || "";
         $("infections").value = savedProfile.infections || "";
-        $("profileHeight").value = savedHealth.h || "";
-        $("profileWeight").value = savedHealth.w || "";
+        $("profileHeight").value = savedHealth.h ?? savedProfile.height ?? "";
+        $("profileWeight").value = savedHealth.w ?? savedProfile.weight ?? "";
 
         const dd = () => $("dt").innerHTML = D.map(x =>
             `<button class="tab" data-d="${x}"
@@ -236,8 +236,15 @@
         $("sv").onclick = () => {
             const name = $("n").value.trim();
             $("nameError").textContent = name.length >= 2 ? "" : "Enter a name with at least 2 characters.";
-            const age = validateNumber("age", "ageError", "Age", 1, 120, true);
-            const calorieGoal = validateNumber("k", "calorieError", "Daily calorie goal", 1000, 4000, true);
+            const age = validateNumber("age", "ageError", "Age", AGE_LIMITS.min, AGE_LIMITS.max, true);
+            const calorieGoal = validateNumber(
+                "k",
+                "calorieError",
+                "Daily calorie goal (between 1,000 and 4,000 kilocalories per day)",
+                CALORIE_GOAL_LIMITS.min,
+                CALORIE_GOAL_LIMITS.max,
+                true
+            );
             const height = validateNumber("profileHeight", "heightError", "Height", HEALTH_LIMITS.height.min, HEALTH_LIMITS.height.max);
             const weight = validateNumber("profileWeight", "weightError", "Weight", HEALTH_LIMITS.weight.min, HEALTH_LIMITS.weight.max);
             if (!name || name.length < 2 || age === null || calorieGoal === null || height === null || weight === null) {
@@ -245,19 +252,16 @@
                 return;
             }
 
-            const user = {...VP.user,name,goalKcal:calorieGoal};
+            const user = {...saveUserName(name), ...VP.user, name, goalKcal:calorieGoal};
             _s("vp_user", user);
             const session = _l("vp_session", null);
             const accounts = _l("vp_users", []);
-            const account = session && accounts.find(item => item.email === session.email);
-            if (account) {
-                account.name = name;
-                _s("vp_users", accounts);
-            }
             _s("vp_profile", {
                 age,
                 allergies: $("allergies").value.trim(),
-                infections: $("infections").value.trim()
+                infections: $("infections").value.trim(),
+                height,
+                weight
             });
             saveHealth({h:height,w:weight});
             _s("vp_diets", dt);
@@ -266,7 +270,7 @@
         };
 
         $("rs").onclick = () => {
-            if (confirm("Delete VitaPlate data saved in this browser? Other websites' data will not be changed.")) {
+            if (confirm("Reset your VitaPlate profile, health, pantry, meal plan, shopping list, preferences, and picture? Your login account will remain active.")) {
                 resetUserData();
                 location.reload();
             }

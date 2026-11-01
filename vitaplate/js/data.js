@@ -1,10 +1,43 @@
 // Mock data + shared helpers (no real API - per project charter)
 const _l=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch{return d}};
 const _s=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const AGE_LIMITS={min:1,max:120};
+const CALORIE_GOAL_LIMITS={min:1000,max:4000};
 const HEALTH_LIMITS={height:{min:100,max:230},weight:{min:25,max:250},bmi:{min:18.5,max:40}};
 const readHealth=()=>_l("vp_health",{});
-const saveHealth=health=>_s("vp_health",{...readHealth(),...health});
-const resetUserData=()=>{Object.keys(localStorage).filter(key=>key.startsWith("vp_")).forEach(key=>localStorage.removeItem(key));};
+const saveUserName=name=>{
+  const user={..._l("vp_user",{}),name};
+  _s("vp_user",user);
+  const session=_l("vp_session",null), accounts=_l("vp_users",[]);
+  if(session?.email){
+    const nextAccounts=accounts.map(account=>account.email===session.email?{...account,name}:account);
+    _s("vp_users",nextAccounts);
+  }
+  return user;
+};
+const saveHealth=health=>{
+  const next={...readHealth(),...health};
+  _s("vp_health",next);
+  const profile=_l("vp_profile",{});
+  if(Object.prototype.hasOwnProperty.call(next,"h"))profile.height=next.h;
+  if(Object.prototype.hasOwnProperty.call(next,"w"))profile.weight=next.w;
+  _s("vp_profile",profile);
+};
+const resetUserData=()=>{
+  const session=_l("vp_session",null);
+  const accounts=_l("vp_users",[]);
+  const account=session?.email?accounts.find(item=>item.email===session.email):null;
+  Object.keys(localStorage)
+    .filter(key=>key.startsWith("vp_")&&!["vp_session","vp_users"].includes(key))
+    .forEach(key=>localStorage.removeItem(key));
+  if(session)_s("vp_session",session);
+  if(accounts.length){
+    _s("vp_users",accounts.map(item=>item.email===session?.email
+      ? {...item,profilePicture:""}
+      : item));
+  }
+  if(account)_s("vp_user",{name:account.name});
+};
 window.VP={
   user:{name:"Shalani",goalKcal:1800,macros:{protein:[62,90],carbs:[140,210],fat:[38,60]},..._l("vp_user",{})},
   today:[{meal:"Breakfast",name:"Coconut roti & pol sambol",emoji:"🥥",kcal:420},{meal:"Lunch",name:"Rice, dhal & gotukola sallad",emoji:"🍛",kcal:610},{meal:"Snack",name:"Banana & peanuts",emoji:"🍌",kcal:180}],
@@ -39,8 +72,7 @@ function normalizeIngredient(value){
 const ingredientMatches=(pantryIngredient,recipeIngredient)=>{
   const pantry=normalizeIngredient(pantryIngredient), recipe=normalizeIngredient(recipeIngredient);
   if(!pantry||!recipe)return false;
-  if(pantry===recipe)return true;
-  return /^(rice|flour|bread|pasta|quinoa|oat|milk|yogurt|cheese|butter|cream|chicken|beef|pork|fish|salmon|tuna|shrimp|prawn|egg|lentil|dhal|chickpea|coconut|onion|tomato|carrot|broccoli|spinach|pea|potato|avocado|pumpkin|lemon|lime|honey|sugar|soy|tofu|peanut|almond|cashew|walnut|seed|oil|salt|pepper|curry powder)$/.test(pantry)&&pantry.endsWith(` ${recipe}`);
+  return pantry===recipe;
 };
 const haveIng=ing=>_l("vp_pantry",[]).some(item=>ingredientMatches(item?.name,ing));
 const matchPct=r=>Math.round(r.ing.filter(haveIng).length/r.ing.length*100);
@@ -56,23 +88,33 @@ const allergyIngredients={
   peanuts:["peanut"],"tree nuts":["almond","cashew","walnut","nut"],milk:["milk","yogurt","cheese","butter","cream","dairy"],
   eggs:["egg"],soy:["soy","tofu"],wheat:["wheat","flour","bread","pasta"],fish:["fish","salmon","tuna"],shellfish:["shrimp","prawn","shellfish"]
 };
+function restrictionTerms(restriction){
+  const key=normalizeIngredient(restriction);
+  if(key.includes("peanut"))return allergyIngredients.peanuts;
+  if(key.includes("tree nut")||key.includes("nut"))return ["almond","cashew","walnut","peanut"];
+  if(key.includes("milk")||key.includes("dairy")||key.includes("lactose"))return allergyIngredients.milk;
+  if(key.includes("egg"))return allergyIngredients.eggs;
+  if(key.includes("soy"))return allergyIngredients.soy;
+  if(key.includes("wheat")||key.includes("gluten")||key.includes("celiac"))return allergyIngredients.wheat;
+  if(key.includes("fish"))return allergyIngredients.fish;
+  if(key.includes("shellfish")||key.includes("prawn")||key.includes("shrimp"))return allergyIngredients.shellfish;
+  if(key.includes("diabet")||key.includes("low sugar"))return ["sugar","honey"];
+  return [key];
+}
 function ingredientConflicts(ingredient,restriction){
-  const normalized=normalizeIngredient(ingredient), key=restriction.toLowerCase().trim();
-  const terms=allergyIngredients[key]||[normalizeIngredient(key)];
-  return terms.some(term=>ingredientMatches(normalized,term)||normalized===term||normalized.endsWith(` ${term}`));
+  const normalized=normalizeIngredient(ingredient);
+  return restrictionTerms(restriction).some(term=>ingredientMatches(normalized,term));
 }
 function recipeHasConflict(recipe){
   return savedFoodRestrictions().some(restriction=>{
-    const key=restriction.toLowerCase();
-    const terms=key.includes("diabet")||key.includes("low sugar")?["sugar","honey"]:key.includes("gluten")||key.includes("celiac")?["wheat","flour","bread","pasta"]:null;
-    return (terms||[restriction]).some(term=>(recipe.ing||[]).concat(recipe.ingredients||[]).some(ingredient=>ingredientConflicts(ingredient,term)));
+    return (recipe.ing||[]).concat(recipe.ingredients||[]).some(ingredient=>ingredientConflicts(ingredient,restriction));
   });
 }
 function inferredDietOk(recipe,diet){
   const ingredients=recipe.ing||recipe.ingredients||[];
   const has=terms=>ingredients.some(ingredient=>terms.some(term=>ingredientConflicts(ingredient,term)));
   if(diet==="Vegetarian")return !has(["chicken","beef","pork","fish","salmon","tuna","shrimp","prawn"]);
-  if(diet==="Vegan")return !has(["chicken","beef","pork","fish","salmon","tuna","shrimp","prawn","egg","milk","yogurt","cheese","butter","cream"]);
+  if(diet==="Vegan")return !has(["chicken","beef","pork","fish","salmon","tuna","shrimp","prawn","egg","milk","yogurt","cheese","butter","cream","honey"]);
   if(diet==="Gluten-free")return !has(["wheat","flour","bread","pasta"]);
   if(diet==="Dairy-free")return !has(["milk","yogurt","cheese","butter","cream","dairy"]);
   if(diet==="Nut-free")return !has(["peanut","almond","cashew","walnut","nut"]);
@@ -80,7 +122,7 @@ function inferredDietOk(recipe,diet){
   if(diet==="Low sugar")return !has(["sugar","honey"]);
   return true;
 }
-const dietOk=r=>_l("vp_diets",[]).every(d=>Array.isArray(r.diets)?r.diets.includes(d):inferredDietOk(r,d))&&!recipeHasConflict(r);
+const dietOk=r=>_l("vp_diets",[]).every(d=>inferredDietOk(r,d))&&!recipeHasConflict(r);
 // Cartoon food characters (inline SVG)
 function char(kind,size=90){
   const B={

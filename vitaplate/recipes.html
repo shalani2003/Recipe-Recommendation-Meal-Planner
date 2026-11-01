@@ -90,8 +90,8 @@
             <textarea class="input" id="new-recipe-instructions" name="instructions" rows="3" placeholder="Describe how to make it" required></textarea>
           </label>
           <label class="add-recipe-wide" for="new-recipe-image">Choose a photo from your computer
-            <input class="input add-recipe-file" id="new-recipe-image" name="imageFile" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required>
-            <span class="add-recipe-help">Choose a JPG, PNG, or WebP photo smaller than 5 MB.</span>
+            <input class="input add-recipe-file" id="new-recipe-image" name="imageFile" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+            <span class="add-recipe-help">Optionally choose a JPG, PNG, or WebP photo smaller than 5 MB.</span>
           </label>
           <div class="add-recipe-submit add-recipe-wide">
             <button class="btn btn-primary" type="submit">Save recipe</button>
@@ -129,6 +129,33 @@
       available: recipe.ing.filter(haveIng),
       missing: recipe.ing.filter(ingredient => !haveIng(ingredient))
     });
+    const addMissingItemsToShoppingList = recipe => {
+      const ingredients = recipe.ing || recipe.ingredients || [];
+      const missingIngredients = ingredients.filter(ingredient => !haveIng(ingredient));
+      const shoppingList = _l("vp_shop", []);
+      missingIngredients.forEach(ingredient => {
+        if (haveIng(ingredient)) return;
+        if (!shoppingList.some(item => ingredientMatches(item.name, ingredient))) {
+          shoppingList.push({id: Math.random(), name: ingredient, done: false});
+        }
+      });
+      _s("vp_shop", shoppingList);
+    };
+    const addRecipeToPlan = recipe => {
+      const p = _l("vp_plan", {});
+      for (const dy of DAYS) {
+        for (const m of MEALS) {
+          p[dy] = p[dy] || {};
+          if (!p[dy][m]) {
+            p[dy][m] = recipe.id;
+            _s("vp_plan", p);
+            addMissingItemsToShoppingList(recipe);
+            return true;
+          }
+        }
+      }
+      return false;
+    };
 
     function draw() {
       const q = $("q").value.toLowerCase();
@@ -185,12 +212,12 @@
                 <span class="chip warn">${r.kcal} kcal</span>
                 <span class="chip is-off">${r.time} min</span>
               </div>
-              <div class="muted" style="font-size: .85rem">P ${r.p}g · C ${r.c}g · F ${r.f}g</div>
+              <div class="muted" style="font-size: .85rem">Protein ${r.p}g · Carbohydrates ${r.c}g · Fat ${r.f}g</div>
               <div class="muted recipe-ingredients" style="font-size: .8rem">${missingText}</div>
               <div class="stars">${starButtons}</div>
               <div class="row recipe-actions">
                 <button class="btn btn-primary btn-sm" data-plan="${r.id}">Add to plan</button>
-                <button class="btn btn-ghost btn-sm" data-shop="${r.id}">Missing to list</button>
+                <button class="btn btn-ghost btn-sm" data-shop="${r.id}">Add missing items to shopping list</button>
               </div>
             </div>
           </article>
@@ -215,19 +242,9 @@
         rate[i] = (rate[i] == n) ? 0 : +n;
         _s("vp_rate", rate);
       } else if (d.plan) {
-        const p = _l("vp_plan", {});
-        let added = false;
-        outer: for (const dy of DAYS) {
-          for (const m of MEALS) {
-            p[dy] = p[dy] || {};
-            if (!p[dy][m]) {
-              p[dy][m] = +d.plan;
-              added = true;
-              break outer;
-            }
-          }
-        }
-        _s("vp_plan", p);
+        const recipe = [...R, ..._l("vp_recipe_catalog", [])]
+          .find(item => String(item.id) === String(d.plan));
+        const added = recipe ? addRecipeToPlan(recipe) : false;
         if (added) {
           e.target.textContent = "Added ✓";
           window.location.href = "planner.html";
@@ -235,15 +252,23 @@
           e.target.textContent = "Plan full";
         }
       } else if (d.shop) {
-        const r = R.find(x => x.id == d.shop);
-        const s = _l("vp_shop", []);
-        r.ing.filter(i => !haveIng(i)).forEach(i => {
-          if (!s.some(x => ingredientMatches(x.name, i))) {
-            s.push({ id: Math.random(), name: i, done: false });
+        const r = [...R, ..._l("vp_recipe_catalog", [])]
+          .find(item => String(item.id) === String(d.shop));
+        if (!r) return;
+        const pantry = pantryIngredients(r);
+        addMissingItemsToShoppingList(r);
+        const card = e.target.closest(".rcard");
+        if (card) {
+          const missingText = card.querySelector(".recipe-ingredients");
+          if (missingText) {
+            missingText.textContent = pantry.missing.length
+              ? `Missing: ${pantry.missing.join(", ")}`
+              : "Ready to cook";
           }
-        });
-        _s("vp_shop", s);
-        e.target.textContent = "Listed ✓";
+        }
+        e.target.textContent = pantry.missing.length
+          ? "Added missing items ✓"
+          : "Ready to cook ✓";
       } else {
         return;
       }
@@ -258,15 +283,17 @@
   </script>
   <script>
     const apiRecipeContainer = document.getElementById("api-recipes");
+    const RECIPE_API_BASE = location.port === "5000" ? "" : "http://127.0.0.1:5000";
     const apiRecipeCount = document.getElementById("api-recipe-count");
     const apiCookNowButton = document.getElementById("api-cook-now");
     let apiRecipes = [];
     let apiCookNowOnly = false;
 
     function getApiPantryMatch(recipe) {
-      const available = recipe.ingredients.filter(haveIng);
-      const missing = recipe.ingredients.filter(ingredient => !haveIng(ingredient));
-      const percentage = recipe.ingredients.length
+      const ingredients = recipe.ingredients || recipe.ing || [];
+      const available = ingredients.filter(haveIng);
+      const missing = ingredients.filter(ingredient => !haveIng(ingredient));
+      const percentage = ingredients.length
         ? Math.round((available.length / recipe.ingredients.length) * 100)
         : 0;
       return { available, missing, percentage };
@@ -302,6 +329,22 @@
 
       matches.forEach(recipe => {
         const pantry = getApiPantryMatch(recipe);
+        const planRecipe = {
+          ...recipe,
+          id: `api:${recipe.id}`,
+          ing: recipe.ingredients || recipe.ing || [],
+          kcal: recipe.kcal || 0,
+          p: recipe.p || 0,
+          c: recipe.c || 0,
+          f: recipe.f || 0,
+          time: recipe.time || 0,
+          diets: recipe.diets || []
+        };
+        const planCatalog = _l("vp_recipe_catalog", []);
+        if (!planCatalog.some(item => String(item.id) === String(planRecipe.id))) {
+          planCatalog.push(planRecipe);
+          _s("vp_recipe_catalog", planCatalog);
+        }
         const card = document.createElement("article");
         card.className = "rcard";
 
@@ -342,7 +385,13 @@
 
         const instructions = document.createElement("p");
         instructions.textContent = recipe.instructions;
-        body.append(name, meta, ingredients, pantryStatus, instructions);
+        const actions = document.createElement("div");
+        actions.className = "row recipe-actions";
+        actions.innerHTML = `
+          <button class="btn btn-primary btn-sm" data-plan="${planRecipe.id}">Add to plan</button>
+          <button class="btn btn-ghost btn-sm" data-shop="${planRecipe.id}">Add missing items to shopping list</button>
+        `;
+        body.append(name, meta, ingredients, pantryStatus, instructions, actions);
         card.appendChild(body);
         apiRecipeContainer.appendChild(card);
       });
@@ -350,10 +399,14 @@
 
     async function loadApiRecipes() {
       try {
-        const response = await fetch("/api/recipes");
-        if (!response.ok) throw new Error("The server could not load the recipes.");
+        const response = await fetch(`${RECIPE_API_BASE}/api/recipes`);
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({}));
+          throw new Error(result.message || result.error || "The server could not load the recipes.");
+        }
+        const result = await response.json();
 
-        apiRecipes = await response.json();
+        apiRecipes = Array.isArray(result) ? result : result.recipes || [];
         renderApiRecipes(document.getElementById("q").value);
       } catch (error) {
         apiRecipeContainer.textContent = "Could not load recipes. Check that the API server is running.";
@@ -391,18 +444,24 @@
       addRecipeStatus.textContent = "Saving your recipe…";
 
       try {
-        const response = await fetch("/api/recipes", {
+        const response = await fetch(`${RECIPE_API_BASE}/api/recipes`, {
           method: "POST",
           body: formValues,
         });
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({}));
+          throw new Error(result.message || result.error || "The recipe could not be saved.");
+        }
         const result = await response.json();
-        if (!response.ok) throw new Error(result.error || "The recipe could not be saved.");
+        if (result.success === false) {
+          throw new Error(result.message || result.error || "The recipe could not be saved.");
+        }
 
-        apiRecipes.push(result);
+        apiRecipes.push(result.recipe || result);
         apiCookNowOnly = false;
         apiCookNowButton.setAttribute("aria-pressed", "false");
         addRecipeForm.reset();
-        addRecipeStatus.textContent = `${result.name} was added to Other Recipes.`;
+        addRecipeStatus.textContent = `${(result.recipe || result).name} was added to Other Recipes.`;
         renderApiRecipes("");
       } catch (error) {
         addRecipeStatus.textContent = error.message;
@@ -415,8 +474,3 @@
   </script>
 </body>
 </html>
-
-
-
-
-

@@ -238,7 +238,24 @@
 			const $ = id => document.getElementById(id);
 
 			// 1. Setup State
-			let S = _l("vp_shop", []);
+			const SHOP_INITIALIZED_KEY = "vp_shop_initialized";
+			const sampleShoppingItems = [
+				{name: "Rice", done: false},
+				{name: "Onion", done: false},
+				{name: "Coconut", done: false}
+			];
+			const firstVisit = localStorage.getItem("vp_shop") === null
+				&& localStorage.getItem(SHOP_INITIALIZED_KEY) !== "true";
+			let S = firstVisit
+				? sampleShoppingItems.map(item => ({
+					...item,
+					id: Date.now().toString() + Math.random().toString(36).substr(2, 5)
+				}))
+				: _l("vp_shop", []);
+			if (firstVisit) {
+				_s("vp_shop_initialized", true);
+				_s("vp_shop", S);
+			}
 			const save = () => _s("vp_shop", S);
 
 			// 2. Sri Lankan Groceries List (50+ items)
@@ -435,15 +452,32 @@
 					status(`${value} added to your list.`);
 				};
 
+				const plannedRecipes = plan => Object.values(plan)
+					.flatMap(day => Object.values(day || {}))
+					.filter(id => id !== "" && id !== null && id !== undefined)
+					.map(id => [...R, ..._l("vp_recipe_catalog", [])]
+						.find(recipe => String(recipe.id) === String(id)))
+					.filter(Boolean);
+
 				const buildFromMealPlan = () => {
 					const plan = _l("vp_plan", {});
-					const plannedRecipes = Object.values(plan).flatMap(day => Object.values(day || {}))
-						.map(id => R.find(recipe => recipe.id == id)).filter(Boolean);
-					const missing = [...new Set(plannedRecipes.flatMap(recipe => recipe.ing))].filter(ingredient => !haveIng(ingredient));
-					const added = missing.filter(addShoppingItem);
+					const recipes = plannedRecipes(plan);
+					const missing = recipes
+						.flatMap(recipe => recipe.ing || [])
+						.filter(ingredient => !haveIng(ingredient));
+					const added = [...new Set(missing.map(normalizeIngredient))]
+						.map(normalized => missing.find(ingredient => normalizeIngredient(ingredient) === normalized))
+						.filter(Boolean)
+						.filter(addShoppingItem);
 					save();
 					draw();
-					status(added.length ? `${added.length} missing ingredient${added.length === 1 ? "" : "s"} added.` : "Your shopping list is already up to date.");
+					if (!recipes.length) {
+						status("Add meals to your meal plan before building a shopping list.");
+					} else {
+						status(added.length
+							? `${added.length} missing ingredient${added.length === 1 ? "" : "s"} added.`
+							: "Your shopping list is already up to date.");
+					}
 				};
 
 				// 7. Event Listeners
