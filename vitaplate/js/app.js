@@ -17,6 +17,10 @@ function updateShellName(name){
   const nameElement=document.querySelector(".user-card b");
   if(nameElement)nameElement.textContent=name;
 }
+function updateShellGoal(goalKcal){
+  const goalElement=document.getElementById("shellGoal");
+  if(goalElement)goalElement.textContent=`Goal: ${goalKcal} kcal/day`;
+}
 function buildShell(){
   const page=document.body.dataset.page, title=document.body.dataset.title||"";
   const links=NAV.map(([h,i,t])=>`<a href="${h}" ${h===page?'aria-current="page"':''}><span aria-hidden="true">${i}</span>${t}</a>`).join("");
@@ -24,7 +28,7 @@ function buildShell(){
   document.body.insertAdjacentHTML("afterbegin",`
   <aside class="sidebar" id="sidebar"><button class="pin-btn" id="pinBtn" aria-pressed="false">📌 Pin</button><div class="brand"><img src="assets/logo.jpeg" alt="VitaPlate - Nourish. Plan. Thrive."></div>
   <nav class="nav" aria-label="Main">${links}</nav>
-  <div class="user-card"><div class="avatar" id="shellAvatar"></div><div><a href="settings.html" ${page==="settings.html"?'aria-current="page"':''}><b>${u.name}</b></a><div class="muted" style="font-size:.8rem">Goal: ${u.goalKcal} kcal/day</div></div></div><button class="btn btn-ghost btn-sm" id="logout">Log out</button></aside>
+  <div class="user-card"><div class="avatar" id="shellAvatar"></div><div><a href="settings.html" ${page==="settings.html"?'aria-current="page"':''}><b>${u.name}</b></a><div class="muted" id="shellGoal" style="font-size:.8rem">Goal: ${u.goalKcal} kcal/day</div></div></div><button class="btn btn-ghost btn-sm" id="logout">Log out</button></aside>
   <div class="scrim" id="scrim"></div>`);
   const main=document.querySelector(".main");
   main.insertAdjacentHTML("afterbegin",`<header class="topbar"><button class="btn btn-ghost btn-sm menu-btn" id="menuBtn" aria-label="Open menu">☰</button><span class="muted" style="margin-left:auto">${title}</span></header>`);
