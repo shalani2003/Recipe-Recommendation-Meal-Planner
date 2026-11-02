@@ -231,27 +231,23 @@
         $("wk").textContent = T.kcal + " of " + w + " kcal";
 
         // Nutrition summary cards
-        $("tot").innerHTML = [
-            ["Calories", T.kcal, w, "var(--olive)", "kcal"],
-            ["Protein", T.p, 90 * 7, "var(--sage)", "g"],
-            ["Carbs", T.c, 210 * 7, "var(--slate)", "g"]
-        ].map(([n, v, g, c, u]) => `
-            <div class="stat-row">
-
-                <div>
-                    <span>${n}</span>
-                    <span class="muted">${v} / ${g} ${u}</span>
-                </div>
-
-                <div class="bar">
-                    <i style="--v:${Math.min(v / g * 100, 100)}%;--c:${c}"></i>
-                </div>
-
-            </div>
-        `).join("") + `
-            <div class="muted">Fat ${T.f} g this week</div>
-        `;
-    }
+        // Nutrition summary cards
+$("tot").innerHTML = [
+    ["Calories", T.kcal, w, "var(--olive)", "kcal"],
+    ["Protein", T.p, 90 * 7, "var(--sage)", "g"],
+    ["Carbs", T.c, 210 * 7, "var(--slate)", "g"],
+    ["Fat", T.f, 60 * 7, "var(--olive)", "g"]
+].map(([n, v, g, c, u]) => `
+    <div class="stat-row">
+        <div>
+            <span>${n}</span>
+            <span class="muted">${v} / ${g} ${u}</span>
+        </div>
+        <div class="bar">
+            <i style="--v:${Math.min(v / g * 100, 100)}%;--c:${c}"></i>
+        </div>
+    </div>
+`).join("");
 
     // Save selected meals
     document.addEventListener("change", e => {
