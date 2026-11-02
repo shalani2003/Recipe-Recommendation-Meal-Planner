@@ -135,6 +135,7 @@ def edit_pantry(item_id):
         return error("You already have this item with the same unit. Edit that one instead.", 409)
     db.execute("UPDATE pantry SET name=?, category=?, quantity=?, unit=?, expiry_date=? WHERE id=?",
                (name, cat, qty, unit, exp, item_id))
+    ps.sync_legacy_items(db, g.user_id)
     db.commit()
     return jsonify({"item": item_json(own_item(item_id), client_today())})
 
@@ -158,9 +159,11 @@ def change_quantity(item_id):
     db = get_db()
     if new_qty <= 0:  # reaching 0 removes the item, as the page already did
         db.execute("DELETE FROM pantry WHERE id = ?", (item_id,))
+        ps.sync_legacy_items(db, g.user_id)
         db.commit()
         return jsonify({"deleted": True, "id": item_id})
     db.execute("UPDATE pantry SET quantity = ? WHERE id = ?", (min(new_qty, ps.MAX_QTY), item_id))
+    ps.sync_legacy_items(db, g.user_id)
     db.commit()
     return jsonify({"item": item_json(own_item(item_id), client_today())})
 
@@ -172,6 +175,7 @@ def delete_pantry_item(item_id):
         return error("Item not found", 404)
     db = get_db()
     db.execute("DELETE FROM pantry WHERE id = ?", (item_id,))
+    ps.sync_legacy_items(db, g.user_id)
     db.commit()
     return jsonify({"ok": True})
 
@@ -181,5 +185,6 @@ def delete_pantry_item(item_id):
 def clear_pantry():
     db = get_db()
     cur = db.execute("DELETE FROM pantry WHERE user_id = ?", (g.user_id,))
+    ps.sync_legacy_items(db, g.user_id)
     db.commit()
     return jsonify({"ok": True, "removed": cur.rowcount})

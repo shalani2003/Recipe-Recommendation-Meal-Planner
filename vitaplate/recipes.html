@@ -122,8 +122,37 @@
     };
 
     let mode = "all";
-    let favs = _l("vp_fav", []);
-    let rate = _l("vp_rate", {});
+    let favs = [];
+    let rate = {};
+    const savedRecipeRequest = async (path, method = "GET", data) => {
+      const response = await fetch(path, {
+        method,
+        credentials: "same-origin",
+        headers: data === undefined ? {} : {"Content-Type": "application/json"},
+        body: data === undefined ? undefined : JSON.stringify(data)
+      });
+      const result = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        location.replace("login.html");
+        throw new Error("Please sign in again.");
+      }
+      if (!response.ok) throw new Error(result.error || "Could not save recipe data.");
+      return result;
+    };
+    const loadSavedRecipeData = async () => {
+      try {
+        const [favoriteData, ratingData] = await Promise.all([
+          savedRecipeRequest("/api/favorites"),
+          savedRecipeRequest("/api/ratings")
+        ]);
+        favs = favoriteData.favorites || [];
+        rate = ratingData.ratings || {};
+        draw();
+      } catch (error) {
+        console.error("Could not load saved favorites and ratings:", error);
+        $("grid").textContent = error.message;
+      }
+    };
 
     const pantryIngredients = recipe => ({
       available: recipe.ing.filter(haveIng),
@@ -141,14 +170,18 @@
       });
       _s("vp_shop", shoppingList);
     };
-    const addRecipeToPlan = recipe => {
-      const p = _l("vp_plan", {});
+    const addRecipeToPlan = async recipe => {
+      const current = await savedRecipeRequest("/api/meal-plan");
+      const entries = current.meals || [];
       for (const dy of DAYS) {
         for (const m of MEALS) {
-          p[dy] = p[dy] || {};
-          if (!p[dy][m]) {
-            p[dy][m] = recipe.id;
-            _s("vp_plan", p);
+          if (!entries.some(entry => entry.day === dy && entry.meal === m)) {
+            entries.push({
+              day: dy,
+              meal: m,
+              recipe: {name: recipe.name, ingredients: recipe.ing || recipe.ingredients || []}
+            });
+            await savedRecipeRequest("/api/meal-plan", "PUT", {meals: entries});
             addMissingItemsToShoppingList(recipe);
             return true;
           }
@@ -166,7 +199,7 @@
           const matchesQuery = r.name.toLowerCase().includes(q);
           const matchesMode = (
             mode === "all" ||
-            (mode === "fav" && favs.includes(r.id)) ||
+            (mode === "fav" && favs.some(name => name.toLowerCase() === r.name.toLowerCase())) ||
             (mode === "now" && matchPct(r) >= 60)
           );
 
@@ -187,8 +220,10 @@
 
       $("grid").innerHTML = L.map(r => {
         const photoUrl = FOOD_IMAGES[r.id] || "assets/food/salad-bowl.jpg";
-        const isFav = favs.includes(r.id);
-        const currentRate = rate[r.id] || 0;
+        const isFav = favs.some(name => name.toLowerCase() === r.name.toLowerCase());
+        const currentRate = rate[Object.keys(rate).find(name =>
+          name.toLowerCase() === r.name.toLowerCase()
+        )] || 0;
         const pantry = pantryIngredients(r);
         const missingText = pantry.missing.length
           ? `Missing: ${pantry.missing.join(", ")}`
@@ -225,7 +260,7 @@
       }).join("");
     }
 
-    document.addEventListener("click", e => {
+    document.addEventListener("click", async e => {
       const d = e.target.dataset;
 
       if (d.m) {
@@ -235,16 +270,51 @@
         });
       } else if (d.f) {
         const i = +d.f;
-        favs = favs.includes(i) ? favs.filter(x => x !== i) : [...favs, i];
-        _s("vp_fav", favs);
+        const recipe = R.find(item => item.id === i);
+        if (!recipe) return;
+        try {
+          const isFavorite = favs.some(name => name.toLowerCase() === recipe.name.toLowerCase());
+          await savedRecipeRequest("/api/favorites", isFavorite ? "DELETE" : "POST", {
+            name: recipe.name,
+            ingredients: recipe.ing
+          });
+          favs = isFavorite
+            ? favs.filter(name => name.toLowerCase() !== recipe.name.toLowerCase())
+            : [...favs, recipe.name];
+        } catch (error) {
+          alert(error.message);
+          return;
+        }
       } else if (d.r) {
         const [i, n] = d.r.split(":");
-        rate[i] = (rate[i] == n) ? 0 : +n;
-        _s("vp_rate", rate);
+        const recipe = R.find(item => item.id === +i);
+        if (!recipe) return;
+        const savedRatingName = Object.keys(rate).find(name =>
+          name.toLowerCase() === recipe.name.toLowerCase()
+        );
+        const stars = rate[savedRatingName] == n ? 0 : +n;
+        try {
+          await savedRecipeRequest("/api/ratings", "PUT", {
+            name: recipe.name,
+            ingredients: recipe.ing,
+            stars
+          });
+          if (savedRatingName) delete rate[savedRatingName];
+          if (stars) rate[recipe.name] = stars;
+        } catch (error) {
+          alert(error.message);
+          return;
+        }
       } else if (d.plan) {
         const recipe = [...R, ..._l("vp_recipe_catalog", [])]
           .find(item => String(item.id) === String(d.plan));
-        const added = recipe ? addRecipeToPlan(recipe) : false;
+        let added = false;
+        try {
+          added = recipe ? await addRecipeToPlan(recipe) : false;
+        } catch (error) {
+          alert(error.message);
+          return;
+        }
         if (added) {
           e.target.textContent = "Added ✓";
           window.location.href = "planner.html";
@@ -280,6 +350,7 @@
 
     $("q").oninput = draw;
     draw();
+    VP.ready.then(loadSavedRecipeData);
   </script>
   <script>
     const apiRecipeContainer = document.getElementById("api-recipes");

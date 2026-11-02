@@ -59,6 +59,17 @@ def sooner(a, b):
     return min(a, b)
 
 
+def sync_legacy_items(db, user_id):
+    """Keep pantry_items as a compatibility mirror of the canonical pantry rows."""
+    db.execute("DELETE FROM pantry_items WHERE user_id = ?", (user_id,))
+    db.execute(
+        "INSERT INTO pantry_items (user_id, name, cat, qty, unit, exp) "
+        "SELECT user_id, name, category, quantity, unit, expiry_date "
+        "FROM pantry WHERE user_id = ?",
+        (user_id,),
+    )
+
+
 def add_item(db, user_id, name, cat, qty, unit, exp):
     """Add to the pantry. Same name AND same unit (any letter case) -> quantities are added and
     the earlier expiry date is kept. A different unit stays a separate item, so 1 kg is never
@@ -80,6 +91,7 @@ def add_item(db, user_id, name, cat, qty, unit, exp):
             (user_id, name, cat, qty, unit, exp),
         )
         item_id, merged = cur.lastrowid, False
+    sync_legacy_items(db, user_id)
     db.commit()
     return db.execute("SELECT * FROM pantry WHERE id = ?", (item_id,)).fetchone(), merged
 
