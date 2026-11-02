@@ -270,28 +270,37 @@
     });
 
     // Automatically generate meals for the week
-    $("auto").onclick = () => {
-        const L = recipes().filter(dietOk);
+    // Automatically generate meals for the week
+$("auto").onclick = () => {
+    const L = recipes().filter(dietOk);
 
-        if (!L.length) {
-            return alert("No recipes match your diet filters.");
-        }
+    if (!L.length) {
+        return alert("No recipes match your diet filters.");
+    }
 
-        const p = {};
+    const p = {};
 
-        DAYS.forEach(d => {
-            p[d] = {};
+    DAYS.forEach(d => {
+        p[d] = {};
 
-            MEALS.forEach(m => {
-                p[d][m] = L[Math.floor(Math.random() * L.length)].id;
-            });
+        MEALS.forEach(m => {
+            const available = L.filter(recipe =>
+                !Object.values(p[d]).includes(recipe.id)
+            );
+
+            const choices = available.length ? available : L;
+
+            const selected = choices[
+                Math.floor(Math.random() * choices.length)
+            ];
+
+            p[d][m] = selected.id;
         });
+    });
 
-        _s("vp_plan", p);
-
-        draw();
-    };
-
+    _s("vp_plan", p);
+    draw();
+};
     // Clear the weekly meal plan
     $("clr").onclick = () => {
         _s("vp_plan", {});
