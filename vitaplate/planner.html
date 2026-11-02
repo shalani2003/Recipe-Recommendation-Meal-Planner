@@ -155,11 +155,85 @@
 <script>
     const $ = id => document.getElementById(id);
 
-    // Read saved meal plan
-    const get = () => _l("vp_plan", {});
-    const recipes = () => [...R, ..._l("vp_recipe_catalog", [])];
-    const goal = VP.user.goalKcal;
-
+    // Meal plan and the recipe catalog are loaded from the backend.
+    let plan = {};
+    let recipeCatalog = _l("vp_recipe_catalog", []);
+    const get = () => plan;
+    const recipes = () => [...R, ...recipeCatalog];
+    let goal = VP.user.goalKcal;
+    const planRequest = async (path, method = "GET", data) => {
+        const response = await fetch(path, {
+            method,
+            credentials: "same-origin",
+            headers: data === undefined ? {} : {"Content-Type": "application/json"},
+            body: data === undefined ? undefined : JSON.stringify(data)
+        });
+        const result = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+            location.replace("login.html");
+            throw new Error("Please sign in again.");
+        }
+        if (!response.ok) throw new Error(result.error || "Could not save your meal plan.");
+        return result;
+    };
+    const planPayload = value => Object.entries(value).flatMap(([day, meals]) =>
+        Object.entries(meals || {}).filter(([, id]) => id).map(([meal, id]) => {
+            const recipe = recipes().find(item => String(item.id) === String(id));
+            return recipe ? {
+                day,
+                meal,
+                recipe: {name: recipe.name, ingredients: recipe.ing || recipe.ingredients || []}
+            } : null;
+        }).filter(Boolean)
+    );
+    async function savePlan(value) {
+        try {
+            await planRequest("/api/meal-plan", "PUT", {meals: planPayload(value)});
+            return true;
+        } catch (error) {
+            alert(error.message);
+            return false;
+        }
+    }
+    async function loadPlan() {
+        try {
+            await VP.ready;
+            const [catalogResult, planResult] = await Promise.all([
+                planRequest("/api/recipes"),
+                planRequest("/api/meal-plan")
+            ]);
+            const serverRecipes = Array.isArray(catalogResult) ? catalogResult : catalogResult.recipes || [];
+            recipeCatalog = [
+                ..._l("vp_recipe_catalog", []),
+                ...serverRecipes.map(recipe => ({
+                    ...recipe,
+                    id: `api:${recipe.id}`,
+                    ing: recipe.ingredients || [],
+                    kcal: recipe.kcal || 0,
+                    p: recipe.protein || recipe.p || 0,
+                    c: recipe.carbs || recipe.c || 0,
+                    f: recipe.fat || recipe.f || 0,
+                    time: recipe.time_min || recipe.time || 0,
+                    diets: recipe.diets || []
+                }))
+            ].filter((recipe, index, list) =>
+                list.findIndex(item => String(item.id) === String(recipe.id)) === index
+            );
+            plan = {};
+            (planResult.meals || []).forEach(item => {
+                const recipe = recipes().find(candidate =>
+                    candidate.name.toLowerCase() === item.recipe_name.toLowerCase()
+                );
+                if (!recipe) return;
+                plan[item.day] = plan[item.day] || {};
+                plan[item.day][item.meal] = recipe.id;
+            });
+            goal = VP.user.goalKcal;
+            draw();
+        } catch (error) {
+            $("days").textContent = error.message || "Could not load your meal plan.";
+        }
+    }
     // Draw the weekly meal planner
     function draw() {
         const p = get();
@@ -254,23 +328,18 @@
     }
 
     // Save selected meals
-    document.addEventListener("change", e => {
+    document.addEventListener("change", async e => {
         const d = e.target.dataset;
 
         if (!d.d) return;
 
-        const p = get();
-
-        p[d.d] = p[d.d] || {};
-        p[d.d][d.m] = +e.target.value || 0;
-
-        _s("vp_plan", p);
-
-        draw();
+        plan[d.d] = plan[d.d] || {};
+        plan[d.d][d.m] = e.target.value || 0;
+        if (await savePlan(plan)) draw();
     });
 
     // Automatically generate meals for the week
-    $("auto").onclick = () => {
+    $("auto").onclick = async () => {
         const L = recipes().filter(dietOk);
 
         if (!L.length) {
@@ -278,28 +347,32 @@
         }
 
         const p = {};
-
-        DAYS.forEach(d => {
-            p[d] = {};
-
-            MEALS.forEach(m => {
-                p[d][m] = L[Math.floor(Math.random() * L.length)].id;
+        DAYS.forEach(day => {
+            p[day] = {};
+            MEALS.forEach(meal => {
+                const available = L.filter(recipe => !Object.values(p[day]).includes(recipe.id));
+                const choices = available.length ? available : L;
+                p[day][meal] = choices[Math.floor(Math.random() * choices.length)].id;
             });
         });
 
-        _s("vp_plan", p);
-
-        draw();
+        if (await savePlan(p)) {
+            plan = p;
+            draw();
+        }
     };
-
     // Clear the weekly meal plan
-    $("clr").onclick = () => {
-        _s("vp_plan", {});
-        draw();
+    $("clr").onclick = async () => {
+        try {
+            await planRequest("/api/meal-plan", "DELETE");
+            plan = {};
+            draw();
+        } catch (error) {
+            alert(error.message);
+        }
     };
 
-    // Display saved data
-    draw();
+    loadPlan();
 </script>
 
 </body>

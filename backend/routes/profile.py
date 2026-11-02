@@ -152,6 +152,12 @@ def put_profile():
     )
     db.execute("UPDATE users SET name = ? WHERE id = ?", (profile["name"], g.user_id))
     db.execute(
+        "INSERT INTO health (user_id, height_cm, weight_kg, target_kg) VALUES (?, ?, ?, ?) "
+        "ON CONFLICT(user_id) DO UPDATE SET height_cm=excluded.height_cm, "
+        "weight_kg=excluded.weight_kg, target_kg=excluded.target_kg",
+        (g.user_id, profile["height"], profile["weight"], profile["target_weight"]),
+    )
+    db.execute(
         "INSERT INTO dietary (user_id, allergies) VALUES (?, ?) "
         "ON CONFLICT(user_id) DO UPDATE SET allergies = excluded.allergies",
         (g.user_id, json.dumps(profile["allergies"])),

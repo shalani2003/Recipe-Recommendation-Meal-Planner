@@ -69,8 +69,8 @@ def create_app(test_config=None):
     app.teardown_appcontext(database.close_db)
     auth_helpers.install_guards(app)
 
-    from routes import auth, dietary, pantry, profile, settings
-    for module in (auth, pantry, dietary, settings, profile):
+    from routes import auth, dietary, pantry, profile, settings, user_food
+    for module in (auth, pantry, dietary, settings, profile, user_food):
         app.register_blueprint(module.bp)
     if not optional_blueprint(app, "routes.recipes"):
         from routes import recipes_legacy

@@ -62,6 +62,27 @@ Units: `pcs g kg ml l cups`. Categories: `Vegetables Fruits Grains Protein Dairy
 
 Profile and dietary allergies are kept in sync. Updating profile name also updates the account name used by settings and `/me`.
 
+Profile height, weight, and target weight are also mirrored to `health` for compatibility with the health page's original table.
+
+## Favorites, ratings, and meal plan
+
+All three data sets are scoped to the logged-in user. Recipe records are resolved by name and created in `recipes` when a user saves a favorite, rating, or planned meal that is not already in the catalog.
+
+| Method | Path | Body | Result |
+|---|---|---|---|
+| GET | `/favorites` (or `/favourites`) | none | `{favorites: [recipe names]}` |
+| POST | `/favorites` (or `/favourites`) | `name`, optional `ingredients` | Adds the favorite |
+| DELETE | `/favorites` (or `/favourites`) | `name` | Removes the favorite |
+| GET | `/ratings` | none | `{ratings: {recipe name: stars}}` |
+| PUT | `/ratings` | `name`, optional `ingredients`, `stars` (0-5) | Saves or updates rating; 0 removes it |
+| GET | `/meal-plan` | none | `{meals: [{day, meal, recipe_id, recipe_name}]}` |
+| PUT | `/meal-plan` | `meals: [{day, meal, recipe: {name, ingredients}}]` | Replaces the user's weekly plan |
+| DELETE | `/meal-plan` | none | Clears the user's weekly plan |
+
+Days are `Mon` through `Sun`; meal types are `Breakfast`, `Lunch`, and `Dinner`. An empty plan slot is omitted from the request.
+
+Pantry writes also mirror the canonical `pantry` rows to `pantry_items`, preserving the legacy column names (`cat`, `qty`, `exp`).
+
 ## Recipes (temporary, until routes/recipes.py)
 
 | Method | Path | Notes |

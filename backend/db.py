@@ -254,3 +254,5 @@ def seed_new_user(db, user_id):
             "VALUES (?,?,?,?,?,?)",
             (user_id, name, cat, qty, unit, exp.isoformat() if exp else None),
         )
+    from services.pantry_service import sync_legacy_items
+    sync_legacy_items(db, user_id)
