@@ -399,18 +399,13 @@
 
     async function loadApiRecipes() {
       try {
-<<<<<<< HEAD
         await VP.ready;
-        const response = await fetch("http://localhost:3000/api/recipes");
-        if (!response.ok) throw new Error("The server could not load the recipes.");
-=======
         const response = await fetch(`${RECIPE_API_BASE}/api/recipes`);
         if (!response.ok) {
           const result = await response.json().catch(() => ({}));
           throw new Error(result.message || result.error || "The server could not load the recipes.");
         }
         const result = await response.json();
->>>>>>> origin/main
 
         apiRecipes = Array.isArray(result) ? result : result.recipes || [];
         renderApiRecipes(document.getElementById("q").value);
@@ -478,11 +473,3 @@
   </script>
 </body>
 </html>
-<<<<<<< HEAD
-
-
-
-
-
-=======
->>>>>>> origin/main
