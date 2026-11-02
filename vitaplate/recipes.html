@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recipes - VitaPlate</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Core Stylesheets -->
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/food-pages.css">
+</head>
+<body data-page="recipes.html" data-title="healthy recipes, made for real life" data-desc="Colourful, nourishing meals built around everyday ingredients. Find your next favourite dish.">
+  <div class="main">
+    <main class="content">
+
+      <!-- Hero Section -->
+      <section class="food-hero recipes-hero">
+        <div class="food-hero-copy">
+          <span class="eyebrow">FRESH IDEAS • FEEL-GOOD FOOD</span>
+          <h1>Healthy recipes,<br>made for real life.</h1>
+          <p>Colourful, nourishing meals built around everyday ingredients. Find your next favourite dish.</p>
+          <a class="btn btn-lime" href="pantry.html">
+            Check my pantry <span aria-hidden="true">→</span>
+          </a>
+          <div class="hero-mini-stats">
+            <span>🥑 Whole ingredients</span>
+            <span>⏱️ Easy prep</span>
+            <span>🌿 Balanced choices</span>
+          </div>
+        </div>
+        <img class="food-hero-photo" src="assets/food/hero-healthy-bowl.jpg" alt="Fresh healthy grain bowl with chicken and vegetables">
+      </section>
+
+      <!-- Section Intro Header -->
+      <div class="recipes-intro">
+        <div>
+          <span class="eyebrow">YOUR KITCHEN, YOUR WAY</span>
+          <h2>Find something delicious</h2>
+          <p class="muted">Recipes are matched to ingredients you already have.</p>
+        </div>
+        <span class="fresh-badge">🌱 Good food, good mood</span>
+      </div>
+
+      <!-- Search & Category Filters -->
+      <div class="filters recipe-filters">
+        <input class="input" id="q" type="search" placeholder="Search healthy recipes…" aria-label="Search recipes">
+        <button class="tab" data-m="all" aria-pressed="true">All recipes</button>
+        <button class="tab" data-m="now" aria-pressed="false">✓ Cook now</button>
+        <button class="tab" data-m="fav" aria-pressed="false">♡ Favourites</button>
+      </div>
+
+      <!-- Recipe Card Grid Container -->
+      <div class="rgrid" id="grid"></div>
+
+      <section class="add-recipe-section" aria-labelledby="add-recipe-title">
+        <div class="add-recipe-heading">
+          <span class="eyebrow">YOUR KITCHEN, YOUR IDEAS</span>
+          <h2 id="add-recipe-title">Add a Recipe</h2>
+          <p class="muted">Share a simple favorite with your recipe collection.</p>
+        </div>
+        <form id="add-recipe-form" class="add-recipe-form">
+          <label for="new-recipe-name">Recipe name
+            <input class="input" id="new-recipe-name" name="name" type="text" placeholder="e.g. Vegetable Rice Bowl" required>
+          </label>
+          <label for="new-recipe-ingredients">Ingredients, separated by commas
+            <input class="input" id="new-recipe-ingredients" name="ingredients" type="text" placeholder="e.g. rice, carrot, peas" required>
+          </label>
+          <label class="add-recipe-wide" for="new-recipe-instructions">Instructions
+            <textarea class="input" id="new-recipe-instructions" name="instructions" rows="3" placeholder="Describe how to make it" required></textarea>
+          </label>
+          <label for="new-recipe-time">Prep time in minutes (optional)
+            <input class="input" id="new-recipe-time" name="time" type="number" min="1" max="1440" step="1" placeholder="e.g. 25">
+          </label>
+          <label for="new-recipe-kcal">Calories per serving (optional)
+            <input class="input" id="new-recipe-kcal" name="kcal" type="number" min="0" max="5000" step="1" placeholder="e.g. 450">
+          </label>
+          <label for="new-recipe-protein">Protein in grams (optional)
+            <input class="input" id="new-recipe-protein" name="protein" type="number" min="0" max="1000" step="any" placeholder="e.g. 30">
+          </label>
+          <label for="new-recipe-carbs">Carbs in grams (optional)
+            <input class="input" id="new-recipe-carbs" name="carbs" type="number" min="0" max="1000" step="any" placeholder="e.g. 55">
+          </label>
+          <label for="new-recipe-fat">Fat in grams (optional)
+            <input class="input" id="new-recipe-fat" name="fat" type="number" min="0" max="1000" step="any" placeholder="e.g. 12">
+          </label>
+          <fieldset class="add-recipe-wide" style="border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px 18px;">
+            <legend style="padding: 0; margin-bottom: 7px; color: #294d37; font-size: .86rem; font-weight: 700;">Diet tags (optional)</legend>
+            <label style="flex-direction: row; align-items: center; gap: 6px; font-weight: 600;"><input type="checkbox" name="diet" value="Vegetarian"> Vegetarian</label>
+            <label style="flex-direction: row; align-items: center; gap: 6px; font-weight: 600;"><input type="checkbox" name="diet" value="Vegan"> Vegan</label>
+            <label style="flex-direction: row; align-items: center; gap: 6px; font-weight: 600;"><input type="checkbox" name="diet" value="Gluten-free"> Gluten-free</label>
+            <label style="flex-direction: row; align-items: center; gap: 6px; font-weight: 600;"><input type="checkbox" name="diet" value="Dairy-free"> Dairy-free</label>
+            <label style="flex-direction: row; align-items: center; gap: 6px; font-weight: 600;"><input type="checkbox" name="diet" value="Nut-free"> Nut-free</label>
+            <label style="flex-direction: row; align-items: center; gap: 6px; font-weight: 600;"><input type="checkbox" name="diet" value="Halal"> Halal</label>
+            <label style="flex-direction: row; align-items: center; gap: 6px; font-weight: 600;"><input type="checkbox" name="diet" value="Low sugar"> Low sugar</label>
+          </fieldset>
+          <label class="add-recipe-wide" for="new-recipe-image">Choose a photo from your computer
+            <input class="input add-recipe-file" id="new-recipe-image" name="imageFile" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required>
+            <span class="add-recipe-help">Choose a JPG, PNG, or WebP photo smaller than 5 MB.</span>
+          </label>
+          <div class="add-recipe-submit add-recipe-wide">
+            <button class="btn btn-primary" type="submit">Save recipe</button>
+            <p id="add-recipe-status" class="muted" role="status" aria-live="polite"></p>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <!-- Application Data & Core Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/api.js"></script>
+
+  <!-- Recipe Page Controller -->
+  <script src="js/recipes.js"></script>
+</body>
+</html>

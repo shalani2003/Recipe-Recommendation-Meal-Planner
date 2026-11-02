@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Your food profile - VitaPlate</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/auth.css">
+  <link rel="stylesheet" href="css/onboarding.css">
+</head>
+<body class="auth onboarding">
+  <aside class="auth-art onboarding-art">
+    <div class="auth-content">
+      <img src="assets/logo.jpeg" alt="VitaPlate logo" class="logo">
+      <p class="onboarding-kicker">A little about you</p>
+      <h1>Meals that fit your life.</h1>
+      <p>Tell us what works for you. We’ll use it to shape a more personal VitaPlate experience.</p>
+      <div class="onboarding-progress" aria-live="polite"><span id="progressLabel">Step 1 of 4</span><div><i id="progressBar"></i></div></div>
+    </div>
+  </aside>
+
+  <main class="auth-form">
+    <section class="auth-card onboarding-card" aria-live="polite">
+      <div class="step-dots" aria-label="Onboarding progress"><span class="is-current"></span><span></span><span></span><span></span></div>
+
+      <section class="onboarding-step" data-step="0">
+        <p class="step-eyebrow">Your eating style</p>
+        <h2>How do you like to eat?</h2>
+        <p class="sub">Choose the option that best describes you.</p>
+        <div class="choice-grid diet-choices">
+          <label class="choice"><input type="radio" name="diet" value="Vegetarian"><span><b>Vegetarian</b><small>No meat or fish</small></span></label>
+          <label class="choice"><input type="radio" name="diet" value="Non-vegetarian"><span><b>Non-vegetarian</b><small>I enjoy a variety of foods</small></span></label>
+        </div>
+        <p class="err form-error" id="dietError" role="alert"></p>
+      </section>
+
+      <section class="onboarding-step" data-step="1" hidden>
+        <p class="step-eyebrow">Food allergies</p>
+        <h2>Anything you need to avoid?</h2>
+        <p class="sub">Select any allergies, or choose “None”.</p>
+        <div class="choice-grid allergy-choices">
+          <label class="check-choice"><input type="checkbox" name="allergy" value="Peanuts"><span>Peanuts</span></label>
+          <label class="check-choice"><input type="checkbox" name="allergy" value="Tree nuts"><span>Tree nuts</span></label>
+          <label class="check-choice"><input type="checkbox" name="allergy" value="Milk"><span>Milk</span></label>
+          <label class="check-choice"><input type="checkbox" name="allergy" value="Eggs"><span>Eggs</span></label>
+          <label class="check-choice"><input type="checkbox" name="allergy" value="Soy"><span>Soy</span></label>
+          <label class="check-choice"><input type="checkbox" name="allergy" value="Wheat"><span>Wheat</span></label>
+          <label class="check-choice"><input type="checkbox" name="allergy" value="Fish"><span>Fish</span></label>
+          <label class="check-choice"><input type="checkbox" name="allergy" value="Shellfish"><span>Shellfish</span></label>
+          <label class="check-choice choice-none"><input type="checkbox" name="allergy" value="None"><span>None</span></label>
+        </div>
+        <label class="field extra-field">Other allergies<input class="input" id="allergyOther" placeholder="Add another allergy" autocomplete="off"></label>
+      </section>
+
+      <section class="onboarding-step" data-step="2" hidden>
+        <p class="step-eyebrow">Health considerations</p>
+        <h2>Any conditions to keep in mind?</h2>
+        <p class="sub">This is optional and helps personalize your meal suggestions.</p>
+        <div class="choice-grid condition-choices">
+          <label class="check-choice"><input type="checkbox" name="condition" value="Diabetes"><span>Diabetes</span></label>
+          <label class="check-choice"><input type="checkbox" name="condition" value="High blood pressure"><span>High blood pressure</span></label>
+          <label class="check-choice"><input type="checkbox" name="condition" value="Heart condition"><span>Heart condition</span></label>
+          <label class="check-choice"><input type="checkbox" name="condition" value="Kidney condition"><span>Kidney condition</span></label>
+          <label class="check-choice"><input type="checkbox" name="condition" value="Digestive condition"><span>Digestive condition</span></label>
+          <label class="check-choice choice-none"><input type="checkbox" name="condition" value="None"><span>None</span></label>
+        </div>
+        <label class="field extra-field">Other condition (optional)<input class="input" id="conditionOther" placeholder="Add another condition" autocomplete="off"></label>
+        <p class="privacy-note">Your answers are saved in this browser with your VitaPlate profile.</p>
+      </section>
+
+      <section class="onboarding-step welcome-step" data-step="3" hidden>
+        <div class="welcome-mark" aria-hidden="true">✓</div>
+        <p class="step-eyebrow">Your profile is ready</p>
+        <h2 id="welcomeTitle">Welcome to VitaPlate!</h2>
+        <p class="welcome-copy" id="welcomeCopy"></p>
+        <p class="sub welcome-summary" id="welcomeSummary"></p>
+      </section>
+
+      <div class="onboarding-actions">
+        <button class="btn btn-ghost back-button" id="backButton" type="button" hidden>Back</button>
+        <button class="btn btn-primary next-button" id="nextButton" type="button">Continue</button>
+      </div>
+    </section>
+  </main>
+  <script src="js/data.js"></script>
+  <script src="js/onboarding.js"></script>
+</body>
+</html>

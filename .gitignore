@@ -1,0 +1,11 @@
+backend/node_modules/
+
+# local database, login secret key and Python files
+backend/vitaplate.db
+backend/secret.key
+backend/venv/
+__pycache__/
+*.pyc
+
+# photos uploaded through the Add a Recipe form
+vitaplate/assets/food/recipe-*
