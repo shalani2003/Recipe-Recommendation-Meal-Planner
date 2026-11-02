@@ -10,6 +10,7 @@ body.pantry{--olive:#2f7d3a;--olive-dk:#1f5a29;--peach:#d9f0d2;--peach-lt:#eef8e
 .layout{display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form-grid .full{grid-column:1/-1}
 .quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.quantity-error{display:block;color:var(--danger);font-size:.78rem;min-height:1em}
 .chip.pick{background:var(--peach-lt);color:var(--olive-dk);border:1.5px dashed #9fcf93}
 .chip.pick:hover{background:var(--peach)}
 .diet{display:flex;flex-wrap:wrap;gap:8px}

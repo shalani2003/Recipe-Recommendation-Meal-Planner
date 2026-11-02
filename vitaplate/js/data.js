@@ -1,6 +1,43 @@
 // Shared sample catalog and helpers; account state is hydrated from the API.
 const _l=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch{return d}};
 const _s=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const AGE_LIMITS={min:1,max:120};
+const CALORIE_GOAL_LIMITS={min:1000,max:4000};
+const HEALTH_LIMITS={height:{min:100,max:230},weight:{min:25,max:250},bmi:{min:18.5,max:40}};
+const readHealth=()=>_l("vp_health",{});
+const saveUserName=name=>{
+  const user={..._l("vp_user",{}),name};
+  _s("vp_user",user);
+  const session=_l("vp_session",null), accounts=_l("vp_users",[]);
+  if(session?.email){
+    const nextAccounts=accounts.map(account=>account.email===session.email?{...account,name}:account);
+    _s("vp_users",nextAccounts);
+  }
+  return user;
+};
+const saveHealth=health=>{
+  const next={...readHealth(),...health};
+  _s("vp_health",next);
+  const profile=_l("vp_profile",{});
+  if(Object.prototype.hasOwnProperty.call(next,"h"))profile.height=next.h;
+  if(Object.prototype.hasOwnProperty.call(next,"w"))profile.weight=next.w;
+  _s("vp_profile",profile);
+};
+const resetUserData=()=>{
+  const session=_l("vp_session",null);
+  const accounts=_l("vp_users",[]);
+  const account=session?.email?accounts.find(item=>item.email===session.email):null;
+  Object.keys(localStorage)
+    .filter(key=>key.startsWith("vp_")&&!["vp_session","vp_users"].includes(key))
+    .forEach(key=>localStorage.removeItem(key));
+  if(session)_s("vp_session",session);
+  if(accounts.length){
+    _s("vp_users",accounts.map(item=>item.email===session?.email
+      ? {...item,profilePicture:""}
+      : item));
+  }
+  if(account)_s("vp_user",{name:account.name});
+};
 window.VP={
   user:{name:"Friend",goalKcal:1800,profilePicture:"",macros:{protein:[62,90],carbs:[140,210],fat:[38,60]}},
   pantry:[],
@@ -20,9 +57,80 @@ const R=[
  {id:8,name:"Creamy chicken curry",kind:"bowl",time:40,kcal:560,p:42,c:22,f:32,diets:[GF,H],ing:["Chicken","Coconut","Onion","Curry powder"]}
 ];
 const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],MEALS=["Breakfast","Lunch","Dinner"];
+<<<<<<< HEAD
 const haveIng=ing=>VP.pantry.some(i=>{const a=i.name.toLowerCase(),b=ing.toLowerCase();return a.includes(b)||b.includes(a)});
 const matchPct=r=>Math.round(r.ing.filter(haveIng).length/r.ing.length*100);
 const dietOk=r=>VP.diets.every(d=>r.diets.includes(d));
+=======
+const INGREDIENT_ALIASES={
+  eggs:"egg", tomatoes:"tomato", onions:"onion", carrots:"carrot", lentils:"lentil", chickpeas:"chickpea",
+  peanuts:"peanut", almonds:"almond", cashews:"cashew", walnuts:"walnut", mushrooms:"mushroom",
+  potatoes:"potato", apples:"apple", bananas:"banana", peppers:"pepper"
+};
+const INGREDIENT_DESCRIPTORS=/^(basmati|samba|jasmine|white|brown|red|green|fresh|frozen|baby|boneless|skinless|large|small|medium|can|tin|pack|bunch)\s+|\s+(breast|thigh|fillet|minced|ground|diced|chopped|sliced)$/g;
+function normalizeIngredient(value){
+  let text=String(value||"").toLowerCase().replace(/[\u00a0\u2013\u2014]/g," ").replace(/[^a-z0-9\s]/g," ");
+  text=text.replace(/^\s*(?:\d+(?:\.\d+)?|\d+\/\d+)\s*(?:g|kg|ml|l|oz|lb|lbs|cup|cups|tbsp|tsp|teaspoons?|tablespoons?|pieces?|pcs|cloves?)?\s*/," ");
+  text=text.replace(/\s+/g," ").trim();
+  text=text.replace(/\b(eggs|tomatoes|onions|carrots|lentils|chickpeas|peanuts|almonds|cashews|walnuts|mushrooms|potatoes|apples|bananas|peppers)\b/g,word=>INGREDIENT_ALIASES[word]||word);
+  text=text.replace(/\b(\w+)s\b/g,"$1");
+  return text.replace(INGREDIENT_DESCRIPTORS," ").trim();
+}
+const ingredientMatches=(pantryIngredient,recipeIngredient)=>{
+  const pantry=normalizeIngredient(pantryIngredient), recipe=normalizeIngredient(recipeIngredient);
+  if(!pantry||!recipe)return false;
+  return pantry===recipe;
+};
+const haveIng=ing=>_l("vp_pantry",[]).some(item=>ingredientMatches(item?.name,ing));
+const matchPct=r=>Math.round(r.ing.filter(haveIng).length/r.ing.length*100);
+function savedFoodRestrictions(){
+  const profile=_l("vp_profile",{}), session=_l("vp_session",null), profiles=_l("vp_diet_profiles",{});
+  const onboarding=session?.email?profiles[session.email]:null;
+  const allergies=[];
+  const add=value=>String(value||"").split(",").map(item=>item.trim()).filter(item=>item&&item.toLowerCase()!=="none").forEach(item=>allergies.push(item));
+  add(profile.allergies); add(profile.infections); (onboarding?.allergies||[]).forEach(add); (onboarding?.conditions||[]).forEach(add);
+  return [...new Set(allergies.map(item=>item.toLowerCase()))];
+}
+const allergyIngredients={
+  peanuts:["peanut"],"tree nuts":["almond","cashew","walnut","nut"],milk:["milk","yogurt","cheese","butter","cream","dairy"],
+  eggs:["egg"],soy:["soy","tofu"],wheat:["wheat","flour","bread","pasta"],fish:["fish","salmon","tuna"],shellfish:["shrimp","prawn","shellfish"]
+};
+function restrictionTerms(restriction){
+  const key=normalizeIngredient(restriction);
+  if(key.includes("peanut"))return allergyIngredients.peanuts;
+  if(key.includes("tree nut")||key.includes("nut"))return ["almond","cashew","walnut","peanut"];
+  if(key.includes("milk")||key.includes("dairy")||key.includes("lactose"))return allergyIngredients.milk;
+  if(key.includes("egg"))return allergyIngredients.eggs;
+  if(key.includes("soy"))return allergyIngredients.soy;
+  if(key.includes("wheat")||key.includes("gluten")||key.includes("celiac"))return allergyIngredients.wheat;
+  if(key.includes("fish"))return allergyIngredients.fish;
+  if(key.includes("shellfish")||key.includes("prawn")||key.includes("shrimp"))return allergyIngredients.shellfish;
+  if(key.includes("diabet")||key.includes("low sugar"))return ["sugar","honey"];
+  return [key];
+}
+function ingredientConflicts(ingredient,restriction){
+  const normalized=normalizeIngredient(ingredient);
+  return restrictionTerms(restriction).some(term=>ingredientMatches(normalized,term));
+}
+function recipeHasConflict(recipe){
+  return savedFoodRestrictions().some(restriction=>{
+    return (recipe.ing||[]).concat(recipe.ingredients||[]).some(ingredient=>ingredientConflicts(ingredient,restriction));
+  });
+}
+function inferredDietOk(recipe,diet){
+  const ingredients=recipe.ing||recipe.ingredients||[];
+  const has=terms=>ingredients.some(ingredient=>terms.some(term=>ingredientConflicts(ingredient,term)));
+  if(diet==="Vegetarian")return !has(["chicken","beef","pork","fish","salmon","tuna","shrimp","prawn"]);
+  if(diet==="Vegan")return !has(["chicken","beef","pork","fish","salmon","tuna","shrimp","prawn","egg","milk","yogurt","cheese","butter","cream","honey"]);
+  if(diet==="Gluten-free")return !has(["wheat","flour","bread","pasta"]);
+  if(diet==="Dairy-free")return !has(["milk","yogurt","cheese","butter","cream","dairy"]);
+  if(diet==="Nut-free")return !has(["peanut","almond","cashew","walnut","nut"]);
+  if(diet==="Halal")return !has(["pork","ham","bacon","alcohol"]);
+  if(diet==="Low sugar")return !has(["sugar","honey"]);
+  return true;
+}
+const dietOk=r=>_l("vp_diets",[]).every(d=>inferredDietOk(r,d))&&!recipeHasConflict(r);
+>>>>>>> origin/main
 // Cartoon food characters (inline SVG)
 function char(kind,size=90){
   const B={

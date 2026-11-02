@@ -6,7 +6,7 @@
 <body class="pantry" data-page="pantry.html" data-title="Pantry">
 <div class="main"><main class="content">
   <section class="food-hero pantry-hero"><div class="food-hero-copy"><span class="eyebrow">YOUR FRESH FOOD HUB</span><h1>A happier kitchen<br>starts right here.</h1><p>Keep track of the good stuff you have, use fresh ingredients in time, and turn everyday food into healthy meals.</p><a class="btn btn-lime" href="recipes.html">Find recipes <span aria-hidden="true">→</span></a><div class="hero-mini-stats"><span>🥬 Fresh ingredients</span><span>♻️ Less food waste</span><span>🍲 More home cooking</span></div></div><img class="food-hero-photo" src="assets/food/salad-bowl.jpg" alt="Fresh colourful bowl of vegetables and healthy ingredients"></section>
-  <section class="pantry-summary"><div class="summary-copy"><span class="eyebrow">PANTRY OVERVIEW</span><h2>Your kitchen at a glance</h2><p class="muted">A little planning helps your ingredients go further.</p></div><div class="tiles"><div class="tile"><span class="tile-icon">🧺</span><b id="sItems">0</b><span>Items tracked</span></div><div class="tile"><span class="tile-icon">⏰</span><b id="sSoon">0</b><span>Use soon</span></div><div class="tile"><span class="tile-icon">🌿</span><b id="sDiet">0</b><span>Diet filters</span></div></div></section>
+  <section class="pantry-summary"><div class="summary-copy"><span class="eyebrow">PANTRY OVERVIEW</span><h2>Your kitchen at a glance</h2><p class="muted">A little planning helps your ingredients go further.</p></div><div class="tiles"><div class="tile"><span class="tile-icon">🧺</span><b id="sItems">0</b><span>Items tracked</span></div><div class="tile"><span class="tile-icon">⏰</span><b id="sExpired">0</b><span>Expired</span></div><div class="tile"><span class="tile-icon">🌿</span><b id="sSoon">0</b><span>Expiring soon</span></div></div></section>
   <div class="layout">
     <div class="grid">
       <section class="card pantry-add-card"><div class="card-head"><div><span class="eyebrow">STOCK YOUR SHELF</span><h2>Add to your pantry</h2></div><span class="card-icon">🥑</span></div>
@@ -14,8 +14,13 @@
           <label class="field full">Name<input class="input" id="name" required placeholder="e.g. Red onions"></label>
           <label class="field">Category<select class="input" id="cat"></select></label>
           <label class="field">Expiry date<input class="input" id="exp" type="date"></label>
+<<<<<<< HEAD
           <label class="field">Amount<input class="input" id="qty" type="number" min="0.01" max="100000" step="any" value="1"></label>
           <label class="field">Unit<select class="input" id="unit"><option>pcs</option><option>g</option><option>kg</option><option>ml</option><option>l</option><option>cups</option></select></label>
+=======
+          <label class="field">Amount<input class="input" id="qty" type="number" min="0.01" max="99999" step="0.01" value="1" required aria-describedby="quantityError"><small class="quantity-error" id="quantityError" role="alert" aria-live="polite"></small></label>
+          <label class="field">Unit<select class="input" id="unit"><option value="pcs">pcs</option><option value="g">g</option><option value="kg">kg</option><option value="ml">ml</option><option value="l">L</option><option value="cups">cups</option></select></label>
+>>>>>>> origin/main
           <button class="btn btn-primary full" type="submit">Add to pantry</button>
         </form>
         <p class="muted" style="margin:14px 0 4px;font-size:.85rem">Quick add</p><div class="quick" id="quick"></div>
