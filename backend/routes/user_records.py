@@ -24,7 +24,8 @@ def parse_day(value):
 
 def shopping_items(db, user_id):
     rows = db.execute(
-        "SELECT id, name, qty, unit, cat, bought FROM shopping_items "
+        "SELECT id, name, qty, unit, cat, bought, expiry_date, source, "
+        "manual_quantity_base FROM shopping_items "
         "WHERE user_id = ? ORDER BY id",
         (user_id,),
     ).fetchall()
@@ -32,20 +33,164 @@ def shopping_items(db, user_id):
         {
             "id": row["id"],
             "name": row["name"],
+            "item_name": row["name"],
             "quantity": row["qty"],
+            "qty": row["qty"],
             "unit": row["unit"],
             "category": row["cat"],
+            "expiry_date": row["expiry_date"],
             "done": bool(row["bought"]),
             "bought": bool(row["bought"]),
+            "is_bought": bool(row["bought"]),
+            "source": row["source"],
+            "manualQuantityBase": row["manual_quantity_base"],
         }
         for row in rows
     ]
+
+
+def shopping_item(data):
+    if not isinstance(data, dict):
+        return None, "Each shopping item must be an object"
+    name, problem = clean_text(
+        data.get("name", data.get("item_name")), "an item name", 1, 120
+    )
+    if problem:
+        return None, problem
+    done = data.get("done", data.get("bought", data.get("is_bought", False)))
+    if not isinstance(done, bool):
+        return None, "Shopping item done must be true or false"
+    quantity = data.get("quantity", data.get("qty"))
+    if quantity in ("", None):
+        quantity = None
+    elif isinstance(quantity, bool):
+        return None, "Shopping quantity must be a positive number"
+    else:
+        try:
+            quantity = float(quantity)
+        except (OverflowError, TypeError, ValueError):
+            return None, "Shopping quantity must be a positive number"
+        if not math.isfinite(quantity) or quantity <= 0 or quantity > MAX_AMOUNT:
+            return None, "Shopping quantity must be greater than 0 and at most 100000"
+
+    unit = data.get("unit")
+    category = data.get("category", data.get("cat"))
+    if unit is not None and (not isinstance(unit, str) or len(unit) > 30):
+        return None, "Shopping unit must be 30 characters or fewer"
+    if category is not None and (not isinstance(category, str) or len(category) > 60):
+        return None, "Shopping category must be 60 characters or fewer"
+    expiry_date = data.get("expiry_date")
+    if expiry_date in ("", None):
+        expiry_date = None
+    elif not isinstance(expiry_date, str) or parse_day(expiry_date) is None:
+        return None, "expiry_date must be a valid YYYY-MM-DD date"
+    source = data.get("source", "manual")
+    if source not in ("manual", "meal-plan"):
+        return None, "Shopping item source must be manual or meal-plan"
+    manual_quantity_base = data.get("manualQuantityBase", data.get("manual_quantity_base"))
+    if manual_quantity_base in ("", None):
+        manual_quantity_base = None
+    elif isinstance(manual_quantity_base, bool):
+        return None, "manualQuantityBase must be a non-negative number"
+    else:
+        try:
+            manual_quantity_base = float(manual_quantity_base)
+        except (OverflowError, TypeError, ValueError):
+            return None, "manualQuantityBase must be a non-negative number"
+        if not math.isfinite(manual_quantity_base) or not 0 <= manual_quantity_base <= MAX_AMOUNT:
+            return None, "manualQuantityBase must be a non-negative number"
+
+    return (
+        name, quantity, unit, category, int(done), expiry_date, source,
+        manual_quantity_base,
+    ), None
+
+
+def shopping_item_json(row):
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "item_name": row["name"],
+        "quantity": row["qty"],
+        "qty": row["qty"],
+        "unit": row["unit"],
+        "category": row["cat"],
+        "expiry_date": row["expiry_date"],
+        "done": bool(row["bought"]),
+        "bought": bool(row["bought"]),
+        "is_bought": bool(row["bought"]),
+        "source": row["source"],
+        "manualQuantityBase": row["manual_quantity_base"],
+    }
 
 
 @bp.get("/shopping")
 @login_required
 def get_shopping():
     return jsonify({"items": shopping_items(get_db(), g.user_id)})
+
+
+@bp.post("/shopping")
+@login_required
+def add_shopping_item():
+    item, problem = shopping_item(body())
+    if problem:
+        return error(problem)
+    name, quantity, unit, category, done, expiry_date, source, manual_base = item
+    db = get_db()
+    db.execute("BEGIN IMMEDIATE")
+    existing = db.execute(
+        "SELECT * FROM shopping_items WHERE user_id = ? AND lower(trim(name)) = lower(?) "
+        "AND lower(COALESCE(unit, '')) = lower(COALESCE(?, '')) "
+        "AND COALESCE(expiry_date, '') = COALESCE(?, '') ORDER BY id LIMIT 1",
+        (g.user_id, name, unit, expiry_date),
+    ).fetchone()
+    merged = existing is not None
+    if existing:
+        requested_source = source
+        added_quantity = quantity
+        current_quantity = existing["qty"]
+        if current_quantity is not None and quantity is not None:
+            quantity = current_quantity + quantity
+            if quantity > MAX_AMOUNT:
+                db.rollback()
+                return error("Combined shopping quantity cannot exceed 100000")
+        elif current_quantity is not None:
+            quantity = current_quantity
+        source = "meal-plan" if existing["source"] == "meal-plan" else source
+        if existing["source"] == "meal-plan":
+            if requested_source == "manual":
+                manual_base = (existing["manual_quantity_base"] or 0) + (added_quantity or 0)
+            elif manual_base is None:
+                manual_base = existing["manual_quantity_base"]
+        elif manual_base is None:
+            manual_base = existing["manual_quantity_base"]
+        db.execute(
+            "UPDATE shopping_items SET qty = ?, cat = COALESCE(?, cat), "
+            "bought = ?, source = ?, manual_quantity_base = ? WHERE id = ? AND user_id = ?",
+            (quantity, category, int(bool(done or existing["bought"])), source,
+             manual_base, existing["id"], g.user_id),
+        )
+        item_id = existing["id"]
+    else:
+        count = db.execute(
+            "SELECT COUNT(*) FROM shopping_items WHERE user_id = ?", (g.user_id,)
+        ).fetchone()[0]
+        if count >= MAX_SHOPPING_ITEMS:
+            db.rollback()
+            return error("A shopping list can contain at most 500 items")
+        cursor = db.execute(
+            "INSERT INTO shopping_items "
+            "(user_id, name, qty, unit, cat, bought, expiry_date, source, manual_quantity_base) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (g.user_id, name, quantity, unit, category, done, expiry_date, source, manual_base),
+        )
+        item_id = cursor.lastrowid
+    db.commit()
+    row = db.execute(
+        "SELECT * FROM shopping_items WHERE id = ? AND user_id = ?", (item_id, g.user_id)
+    ).fetchone()
+    return jsonify({"item": shopping_item_json(row), "merged": merged}), (200 if merged else 201)
 
 
 @bp.put("/shopping")
@@ -59,44 +204,62 @@ def replace_shopping():
 
     cleaned = []
     for item in data["items"]:
-        if not isinstance(item, dict):
-            return error("Each shopping item must be an object")
-        name, problem = clean_text(item.get("name"), "an item name", 1, 120)
+        parsed, problem = shopping_item(item)
         if problem:
             return error(problem)
-        done = item.get("done", item.get("bought", False))
-        if not isinstance(done, bool):
-            return error("Shopping item done must be true or false")
-        quantity = item.get("quantity", item.get("qty"))
-        if quantity in ("", None):
-            quantity = None
-        elif isinstance(quantity, bool):
-            return error("Shopping quantity must be a positive number")
-        else:
-            try:
-                quantity = float(quantity)
-            except (OverflowError, TypeError, ValueError):
-                return error("Shopping quantity must be a positive number")
-            if not math.isfinite(quantity) or quantity <= 0 or quantity > MAX_AMOUNT:
-                return error("Shopping quantity must be greater than 0 and at most 100000")
-
-        unit = item.get("unit")
-        category = item.get("category", item.get("cat"))
-        if unit is not None and (not isinstance(unit, str) or len(unit) > 30):
-            return error("Shopping unit must be 30 characters or fewer")
-        if category is not None and (not isinstance(category, str) or len(category) > 60):
-            return error("Shopping category must be 60 characters or fewer")
-        cleaned.append((g.user_id, name, quantity, unit, category, int(done)))
+        name, quantity, unit, category, done, expiry_date, source, manual_base = parsed
+        cleaned.append(
+            (g.user_id, name, quantity, unit, category, done, expiry_date, source, manual_base)
+        )
 
     db = get_db()
     db.execute("DELETE FROM shopping_items WHERE user_id = ?", (g.user_id,))
     db.executemany(
-        "INSERT INTO shopping_items (user_id, name, qty, unit, cat, bought) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO shopping_items "
+        "(user_id, name, qty, unit, cat, bought, expiry_date, source, manual_quantity_base) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         cleaned,
     )
     db.commit()
     return jsonify({"items": shopping_items(db, g.user_id)})
+
+
+@bp.patch("/shopping/<int:item_id>")
+@login_required
+def update_shopping_item(item_id):
+    data = body()
+    if not isinstance(data, dict):
+        return error("Shopping item update must be a JSON object")
+    bought_key = next(
+        (key for key in ("is_bought", "bought", "done") if key in data), None
+    )
+    if bought_key is None or not isinstance(data[bought_key], bool):
+        return error("Send is_bought as true or false")
+    db = get_db()
+    cursor = db.execute(
+        "UPDATE shopping_items SET bought = ? WHERE id = ? AND user_id = ?",
+        (int(data[bought_key]), item_id, g.user_id),
+    )
+    if cursor.rowcount == 0:
+        return error("Item not found", 404)
+    db.commit()
+    row = db.execute(
+        "SELECT * FROM shopping_items WHERE id = ? AND user_id = ?", (item_id, g.user_id)
+    ).fetchone()
+    return jsonify({"item": shopping_item_json(row)})
+
+
+@bp.delete("/shopping/<int:item_id>")
+@login_required
+def delete_shopping_item(item_id):
+    db = get_db()
+    cursor = db.execute(
+        "DELETE FROM shopping_items WHERE id = ? AND user_id = ?", (item_id, g.user_id)
+    )
+    if cursor.rowcount == 0:
+        return error("Item not found", 404)
+    db.commit()
+    return jsonify({"ok": True, "removed": 1})
 
 
 @bp.delete("/shopping")

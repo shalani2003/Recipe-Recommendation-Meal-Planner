@@ -32,6 +32,59 @@ def test_shopping_list_validation_and_login(client, user):
     assert user.put("/api/shopping", json={"items": [{"name": "Rice", "quantity": -1}]}).status_code == 400
 
 
+def test_shopping_item_crud_duplicate_merge_and_user_isolation(app, client, user, user2):
+    assert client.post("/api/shopping", json={"name": "Rice"}).status_code == 401
+
+    response = user.post("/api/shopping", json={
+        "item_name": "Rice", "qty": 2, "unit": "kg", "expiry_date": "2027-01-15",
+    })
+    assert response.status_code == 201
+    item = response.get_json()["item"]
+    assert item["name"] == item["item_name"] == "Rice"
+    assert item["quantity"] == item["qty"] == 2
+    assert item["expiry_date"] == "2027-01-15"
+    assert item["is_bought"] is False
+
+    merged = user.post("/api/shopping", json={
+        "name": "rice", "quantity": 3, "unit": "kg", "expiry_date": "2027-01-15",
+    })
+    assert merged.status_code == 200
+    assert merged.get_json()["merged"] is True
+    assert merged.get_json()["item"]["id"] == item["id"]
+    assert merged.get_json()["item"]["quantity"] == 5
+    assert len(user.get("/api/shopping").get_json()["items"]) == 1
+    assert user2.get(f"/api/shopping/{item['id']}").status_code == 404
+
+    updated = user.patch(f"/api/shopping/{item['id']}", json={"is_bought": True})
+    assert updated.status_code == 200
+    assert updated.get_json()["item"]["done"] is True
+    assert user.patch(f"/api/shopping/{item['id']}", json={"is_bought": "yes"}).status_code == 400
+
+    with app.app_context():
+        db = get_db()
+        user_id = db.execute(
+            "SELECT id FROM users WHERE email = ?", ("nimal@example.com",)
+        ).fetchone()["id"]
+        row = db.execute(
+            "SELECT qty, bought, expiry_date FROM shopping_items WHERE user_id = ? AND id = ?",
+            (user_id, item["id"]),
+        ).fetchone()
+        assert tuple(row) == (5, 1, "2027-01-15")
+
+    assert user.delete(f"/api/shopping/{item['id']}").get_json() == {"ok": True, "removed": 1}
+    assert user.delete(f"/api/shopping/{item['id']}").status_code == 404
+
+
+def test_shopping_item_rejects_bad_expiry_and_supports_clear(app, user):
+    assert user.post("/api/shopping", json={
+        "name": "Rice", "expiry_date": "not-a-date",
+    }).status_code == 400
+    user.post("/api/shopping", json={"name": "Rice", "quantity": 1})
+    user.post("/api/shopping", json={"name": "Milk", "quantity": 2})
+    response = user.delete("/api/shopping")
+    assert response.get_json() == {"ok": True, "removed": 2}
+
+
 def test_water_is_saved_per_user_and_day(app, user, user2):
     day = "2026-11-02"
     assert user.get(f"/api/water?day={day}").get_json() == {"day": day, "glasses": 0}

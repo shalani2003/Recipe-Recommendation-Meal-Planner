@@ -88,7 +88,10 @@ Pantry writes also mirror the canonical `pantry` rows to `pantry_items`, preserv
 | Method | Path | Body | Result |
 |---|---|---|---|
 | GET | `/shopping` | none | `{items: [{id, name, quantity, unit, category, done}]}` |
-| PUT | `/shopping` | `items: [{name, quantity?, unit?, category?, done?}]` | Replaces the current user's list and returns saved rows |
+| POST | `/shopping` | `{name, quantity?, unit?, category?, expiry_date?, is_bought?}` | Adds an item; matching name, unit, and expiry entries merge quantities |
+| PUT | `/shopping` | `items: [{name, quantity?, unit?, category?, expiry_date?, done?}]` | Replaces the current user's list and returns saved rows (legacy bulk-sync support) |
+| PATCH | `/shopping/<id>` | `{is_bought: boolean}` | Updates the bought state of one of the current user's items |
+| DELETE | `/shopping/<id>` | none | Removes one of the current user's items |
 | DELETE | `/shopping` | none | Clears only the current user's list |
 | GET | `/water?day=YYYY-MM-DD` | none | `{day, glasses}`; defaults to today's server date |
 | PUT | `/water` | `glasses` (0-30), optional `day` | Upserts that day's count |

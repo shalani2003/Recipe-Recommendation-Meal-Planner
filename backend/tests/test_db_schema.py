@@ -40,6 +40,7 @@ def test_init_db_migrates_user_schema_and_legacy_pantry(tmp_path):
     finally:
         connection.close()
 
+
     init_db(str(database))
     connection = sqlite3.connect(database)
     try:
@@ -69,5 +70,50 @@ def test_init_db_migrates_user_schema_and_legacy_pantry(tmp_path):
                 key[2] == "users" and key[3] == "user_id" and key[6] == "CASCADE"
                 for key in foreign_keys
             ), table
+    finally:
+        connection.close()
+
+
+def test_init_db_migrates_existing_shopping_items_without_losing_rows(tmp_path):
+    database = tmp_path / "legacy-shopping.db"
+    connection = sqlite3.connect(database)
+    try:
+        connection.executescript("""
+            CREATE TABLE users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL
+            );
+            INSERT INTO users (name, email, password_hash)
+            VALUES ('Test User', 'test@example.com', 'hash');
+            CREATE TABLE shopping_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                name TEXT NOT NULL,
+                qty REAL,
+                unit TEXT,
+                cat TEXT,
+                bought INTEGER NOT NULL DEFAULT 0
+            );
+            INSERT INTO shopping_items (user_id, name, qty, unit, bought)
+            VALUES (1, 'Rice', 2, 'kg', 1);
+        """)
+        connection.commit()
+    finally:
+        connection.close()
+
+    init_db(str(database))
+    connection = sqlite3.connect(database)
+    try:
+        columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(shopping_items)")
+        }
+        assert {"expiry_date", "source", "manual_quantity_base"} <= columns
+        item = connection.execute(
+            "SELECT name, qty, bought, expiry_date, source, manual_quantity_base "
+            "FROM shopping_items WHERE user_id = 1"
+        ).fetchone()
+        assert item == ("Rice", 2, 1, None, "manual", None)
     finally:
         connection.close()

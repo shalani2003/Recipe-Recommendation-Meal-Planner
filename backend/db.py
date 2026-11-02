@@ -94,13 +94,16 @@ CREATE TABLE IF NOT EXISTS ratings (
     PRIMARY KEY (user_id, recipe_id)
 );
 CREATE TABLE IF NOT EXISTS shopping_items (
-    id      INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    name    TEXT NOT NULL,
-    qty     REAL,
-    unit    TEXT,
-    cat     TEXT,
-    bought  INTEGER NOT NULL DEFAULT 0
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id            INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name               TEXT NOT NULL,
+    qty                REAL,
+    unit               TEXT,
+    cat                TEXT,
+    bought             INTEGER NOT NULL DEFAULT 0,
+    expiry_date        TEXT,
+    source             TEXT NOT NULL DEFAULT 'manual',
+    manual_quantity_base REAL
 );
 
 -- Meal plan, water, health, profile (owner: K. K. Dilshan)
@@ -193,6 +196,15 @@ def init_db(path):
         for col, definition in profile_migrations.items():
             if col not in profile_cols:
                 db.execute("ALTER TABLE profiles ADD COLUMN %s %s" % (col, definition))
+        shopping_cols = {r[1] for r in db.execute("PRAGMA table_info(shopping_items)")}
+        shopping_migrations = {
+            "expiry_date": "TEXT",
+            "source": "TEXT NOT NULL DEFAULT 'manual'",
+            "manual_quantity_base": "REAL",
+        }
+        for col, definition in shopping_migrations.items():
+            if col not in shopping_cols:
+                db.execute("ALTER TABLE shopping_items ADD COLUMN %s %s" % (col, definition))
         db.execute(
             "UPDATE profiles SET allergies = (SELECT dietary.allergies FROM dietary "
             "WHERE dietary.user_id = profiles.user_id) "
