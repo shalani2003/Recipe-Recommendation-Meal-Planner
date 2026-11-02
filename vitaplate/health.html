@@ -169,7 +169,12 @@
             return data;
         };
         let waterGlasses = 0;
-        const today = new Date().toLocaleDateString("en-CA");
+        const now = new Date();
+        const today = [
+            now.getFullYear(),
+            String(now.getMonth() + 1).padStart(2, "0"),
+            String(now.getDate()).padStart(2, "0")
+        ].join("-");
         const renderWater = () => {
             $("waterCount").textContent = `${waterGlasses} glass${waterGlasses === 1 ? "" : "es"} today`;
             $("waterDown").disabled = waterGlasses <= 0;

@@ -532,15 +532,6 @@
 						: `${result.item.name} added to your list.`);
 				};
 
-				const sameGeneratedItems = (left, right) => left.length === right.length
-					&& left.every((item, index) =>
-						item.id === right[index].id
-						&& item.name === right[index].name
-						&& item.quantity === right[index].quantity
-						&& item.unit === right[index].unit
-						&& item.done === right[index].done
-					);
-
 				const syncMealPlanShoppingList = async (announce = false) => {
 					try {
 						await VP.ready;

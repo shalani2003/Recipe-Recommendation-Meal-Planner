@@ -158,17 +158,18 @@
       available: recipe.ing.filter(haveIng),
       missing: recipe.ing.filter(ingredient => !haveIng(ingredient))
     });
-    const addMissingItemsToShoppingList = recipe => {
+    const addMissingItemsToShoppingList = async recipe => {
       const ingredients = recipe.ing || recipe.ingredients || [];
       const missingIngredients = ingredients.filter(ingredient => !haveIng(ingredient));
-      const shoppingList = _l("vp_shop", []);
+      const current = await savedRecipeRequest("/api/shopping");
+      const shoppingList = current.items || [];
       missingIngredients.forEach(ingredient => {
         if (haveIng(ingredient)) return;
         if (!shoppingList.some(item => ingredientMatches(item.name, ingredient))) {
-          shoppingList.push({id: Math.random(), name: ingredient, done: false});
+          shoppingList.push({name: ingredient, quantity: null, unit: null, done: false});
         }
       });
-      _s("vp_shop", shoppingList);
+      await savedRecipeRequest("/api/shopping", "PUT", {items: shoppingList});
     };
     const addRecipeToPlan = async recipe => {
       const current = await savedRecipeRequest("/api/meal-plan");
@@ -182,7 +183,7 @@
               recipe: {name: recipe.name, ingredients: recipe.ing || recipe.ingredients || []}
             });
             await savedRecipeRequest("/api/meal-plan", "PUT", {meals: entries});
-            addMissingItemsToShoppingList(recipe);
+            await addMissingItemsToShoppingList(recipe);
             return true;
           }
         }
@@ -326,7 +327,12 @@
           .find(item => String(item.id) === String(d.shop));
         if (!r) return;
         const pantry = pantryIngredients(r);
-        addMissingItemsToShoppingList(r);
+        try {
+          await addMissingItemsToShoppingList(r);
+        } catch (error) {
+          alert(error.message);
+          return;
+        }
         const card = e.target.closest(".rcard");
         if (card) {
           const missingText = card.querySelector(".recipe-ingredients");
