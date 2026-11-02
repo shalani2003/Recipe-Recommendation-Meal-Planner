@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,14 +9,18 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
 
   <!-- Core Stylesheets -->
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/food-pages.css">
 </head>
-<body data-page="recipes.html" data-title="healthy recipes, made for real life" data-desc="Colourful, nourishing meals built around everyday ingredients. Find your next favourite dish.">
+
+<body data-page="recipes.html" data-title="healthy recipes, made for real life"
+  data-desc="Colourful, nourishing meals built around everyday ingredients. Find your next favourite dish.">
   <div class="main">
     <main class="content">
 
@@ -34,7 +39,8 @@
             <span>🌿 Balanced choices</span>
           </div>
         </div>
-        <img class="food-hero-photo" src="assets/food/hero-healthy-bowl.jpg" alt="Fresh healthy grain bowl with chicken and vegetables">
+        <img class="food-hero-photo" src="assets/food/hero-healthy-bowl.jpg"
+          alt="Fresh healthy grain bowl with chicken and vegetables">
       </section>
 
       <!-- Section Intro Header -->
@@ -65,9 +71,11 @@
             <h2 id="other-recipes-title">Other Recipes</h2>
             <p class="muted">Fresh ideas for something delicious today.</p>
           </div>
-                    <div class="other-recipes-actions">
-            <button class="other-recipes-filter" id="api-cook-now" type="button" aria-pressed="false" title="Show recipes with at least 60% of their ingredients in your pantry">✓ Cook now</button>
-            <span class="other-recipes-badge"><span aria-hidden="true">✦</span> <span id="api-recipe-count">6 recipes</span></span>
+          <div class="other-recipes-actions">
+            <button class="other-recipes-filter" id="api-cook-now" type="button" aria-pressed="false"
+              title="Show recipes with at least 60% of their ingredients in your pantry">✓ Cook now</button>
+            <span class="other-recipes-badge"><span aria-hidden="true">✦</span> <span id="api-recipe-count">6
+                recipes</span></span>
           </div>
         </div>
         <div id="api-recipes" class="rgrid"></div>
@@ -81,16 +89,20 @@
         </div>
         <form id="add-recipe-form" class="add-recipe-form">
           <label for="new-recipe-name">Recipe name
-            <input class="input" id="new-recipe-name" name="name" type="text" placeholder="e.g. Vegetable Rice Bowl" required>
+            <input class="input" id="new-recipe-name" name="name" type="text" placeholder="e.g. Vegetable Rice Bowl"
+              required>
           </label>
           <label for="new-recipe-ingredients">Ingredients, separated by commas
-            <input class="input" id="new-recipe-ingredients" name="ingredients" type="text" placeholder="e.g. rice, carrot, peas" required>
+            <input class="input" id="new-recipe-ingredients" name="ingredients" type="text"
+              placeholder="e.g. rice, carrot, peas" required>
           </label>
           <label class="add-recipe-wide" for="new-recipe-instructions">Instructions
-            <textarea class="input" id="new-recipe-instructions" name="instructions" rows="3" placeholder="Describe how to make it" required></textarea>
+            <textarea class="input" id="new-recipe-instructions" name="instructions" rows="3"
+              placeholder="Describe how to make it" required></textarea>
           </label>
           <label class="add-recipe-wide" for="new-recipe-image">Choose a photo from your computer
-            <input class="input add-recipe-file" id="new-recipe-image" name="imageFile" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required>
+            <input class="input add-recipe-file" id="new-recipe-image" name="imageFile" type="file"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required>
             <span class="add-recipe-help">Choose a JPG, PNG, or WebP photo smaller than 5 MB.</span>
           </label>
           <div class="add-recipe-submit add-recipe-wide">
@@ -105,6 +117,7 @@
   <!-- Application Data & Core Scripts -->
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/api.js"></script>
 
   <!-- Recipe Page Controller -->
   <script>
@@ -291,11 +304,11 @@
         emptyMessage.className = "muted api-empty-state";
         emptyMessage.textContent = apiCookNowOnly
           ? (query
-              ? `No recipes match “${searchText}” and the pantry filter. Try another search or turn off Cook now.`
-              : "No close pantry matches yet. Add ingredients in Pantry or turn off Cook now.")
+            ? `No recipes match “${searchText}” and the pantry filter. Try another search or turn off Cook now.`
+            : "No close pantry matches yet. Add ingredients in Pantry or turn off Cook now.")
           : (query
-              ? `No other recipes match “${searchText}”. Try a different name or ingredient.`
-              : "There are no other recipes to show yet.");
+            ? `No other recipes match “${searchText}”. Try a different name or ingredient.`
+            : "There are no other recipes to show yet.");
         apiRecipeContainer.appendChild(emptyMessage);
         return;
       }
@@ -414,10 +427,5 @@
     loadApiRecipes();
   </script>
 </body>
+
 </html>
-
-
-
-
-
-

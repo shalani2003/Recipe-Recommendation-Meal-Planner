@@ -2,6 +2,7 @@
 VitaPlate backend (Flask + SQLite)
 - Serves the ../vitaplate frontend files
 - API: /api/register, /api/login, /api/logout, /api/me, /api/reset-password
+- API: /api/pantry (see pantry_api.py)
 Run:  python app.py   ->  http://127.0.0.1:5000
 """
 import os
@@ -13,9 +14,11 @@ from datetime import timedelta
 from flask import Flask, g, jsonify, redirect, request, session
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from database import DB_PATH, get_db, init_schema
+from pantry_api import pantry_bp
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(os.path.dirname(BASE_DIR), "vitaplate")
-DB_PATH = os.path.join(BASE_DIR, "vitaplate.db")
 KEY_PATH = os.path.join(BASE_DIR, "secret.key")
 
 
@@ -39,17 +42,12 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(days=7),
 )
 
+app.register_blueprint(pantry_bp)
+
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 
 # ---------------------------------------------------------------- database
-def get_db():
-    if "db" not in g:
-        g.db = sqlite3.connect(DB_PATH)
-        g.db.row_factory = sqlite3.Row
-    return g.db
-
-
 @app.teardown_appcontext
 def close_db(_exc):
     db = g.pop("db", None)
@@ -131,7 +129,8 @@ def register():
         (name, email, generate_password_hash(pw)),
     )
     db.commit()
-    row = db.execute("SELECT * FROM users WHERE id = ?", (cur.lastrowid,)).fetchone()
+    row = db.execute("SELECT * FROM users WHERE id = ?",
+                     (cur.lastrowid,)).fetchone()
     login_user(row)
     return jsonify({"user": public_user(row)}), 201
 
@@ -186,7 +185,8 @@ def reset_password():
         return error(problem)
 
     db = get_db()
-    row = db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+    row = db.execute("SELECT id FROM users WHERE email = ?",
+                     (email,)).fetchone()
     if row is None:
         return error("No account was found with that email.", 404)
 
@@ -206,6 +206,7 @@ def not_found(_e):
 
 
 init_db()
+init_schema()
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)

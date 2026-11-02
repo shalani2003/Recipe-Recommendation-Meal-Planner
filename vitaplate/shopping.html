@@ -1,238 +1,354 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8">
-			<meta name="viewport" content="width=device-width,initial-scale=1">
-				<title>Shopping list - VitaPlate</title>
-				<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-					<link rel="stylesheet" href="css/styles.css">
-						<link rel="stylesheet" href="css/theme.css">
-							<style>
-							
-								.hero-premium {
-								background: linear-gradient(90deg, rgba(21, 74, 34, 0.95) 0%, rgba(21, 74, 34, 0.4) 100%),
-								url('https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1200&auto=format&fit=crop') center/cover no-repeat;
-								min-height: 200px;
-								border-radius: 24px;
-								box-shadow: 0 10px 30px rgba(21, 74, 34, 0.15);
-								margin-bottom: 24px;
-								display: flex;
-								align-items: center;
-								padding: 30px;
-								}
 
-								.hero-premium h1 { color: #fff; font-size: 2.2rem; margin-bottom: 8px; }
-								.hero-premium p { color: #dcebd8; font-size: 1.05rem; max-width: 500px; }
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title>Shopping list - VitaPlate</title>
+	<link
+		href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap"
+		rel="stylesheet">
+	<link rel="stylesheet" href="css/styles.css">
+	<link rel="stylesheet" href="css/theme.css">
+	<style>
+		.hero-premium {
+			background: linear-gradient(90deg, rgba(21, 74, 34, 0.95) 0%, rgba(21, 74, 34, 0.4) 100%),
+				url('https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1200&auto=format&fit=crop') center/cover no-repeat;
+			min-height: 200px;
+			border-radius: 24px;
+			box-shadow: 0 10px 30px rgba(21, 74, 34, 0.15);
+			margin-bottom: 24px;
+			display: flex;
+			align-items: center;
+			padding: 30px;
+		}
 
-								.action-bar {
-								background: #fff;
-								padding: 12px 16px;
-								border-radius: 20px;
-								box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-								display: flex;
-								gap: 12px;
-								align-items: center;
-								margin-bottom: 24px;
-								border: 1px solid #e5ede6;
-								}
+		.hero-premium h1 {
+			color: #fff;
+			font-size: 2.2rem;
+			margin-bottom: 8px;
+		}
 
-								.action-bar input {
-								border-radius: 12px;
-								padding: 12px 18px;
-								border: 1.5px solid transparent;
-								background: #f8fbf7;
-								font-size: 1rem;
-								transition: all 0.2s;
-								flex: 1;
-								outline: none;
-								}
+		.hero-premium p {
+			color: #dcebd8;
+			font-size: 1.05rem;
+			max-width: 500px;
+		}
 
-								.action-bar input:focus {
-								background: #fff;
-								border-color: #2f7d3a;
-								box-shadow: 0 0 0 4px rgba(47, 125, 58, 0.1);
-								}
+		.action-bar {
+			background: #fff;
+			padding: 12px 16px;
+			border-radius: 20px;
+			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+			display: flex;
+			gap: 12px;
+			align-items: center;
+			margin-bottom: 24px;
+			border: 1px solid #e5ede6;
+		}
 
-								.btn-premium {
-								border-radius: 12px;
-								padding: 12px 24px;
-								font-weight: 700;
-								font-size: 0.95rem;
-								transition: all 0.2s;
-								border: none;
-								cursor: pointer;
-								display: flex;
-								align-items: center;
-								gap: 8px;
-								}
+		.action-bar input {
+			border-radius: 12px;
+			padding: 12px 18px;
+			border: 1.5px solid transparent;
+			background: #f8fbf7;
+			font-size: 1rem;
+			transition: all 0.2s;
+			flex: 1;
+			outline: none;
+		}
 
-								.btn-add { background: #2f7d3a; color: #fff; }
-								.btn-add:hover { background: #1f5a29; transform: translateY(-2px); }
+		.action-bar input:focus {
+			background: #fff;
+			border-color: #2f7d3a;
+			box-shadow: 0 0 0 4px rgba(47, 125, 58, 0.1);
+		}
 
-								.btn-move { background: #fff; color: #2f7d3a; border: 1.5px solid #cbe0ce; }
-								.btn-move:hover { background: #f0f8ed; transform: translateY(-2px); }
+		.btn-premium {
+			border-radius: 12px;
+			padding: 12px 24px;
+			font-weight: 700;
+			font-size: 0.95rem;
+			transition: all 0.2s;
+			border: none;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
 
-								.btn-clear { background: #fff0f0; color: #d64a4a; border: 1.5px solid #f5c2c2; padding: 12px 18px;}
-								.btn-clear:hover { background: #ffe0e0; transform: translateY(-2px); }
+		.btn-add {
+			background: #2f7d3a;
+			color: #fff;
+		}
 
-								/* Shopping Cards Grid */
-								.shop-grid { display: flex; flex-direction: column; gap: 12px; }
+		.btn-add:hover {
+			background: #1f5a29;
+			transform: translateY(-2px);
+		}
 
-								.shop-card {
-								background: #fff;
-								border: 1px solid #e5ede6;
-								border-radius: 18px;
-								padding: 16px 20px;
-								display: flex;
-								align-items: center;
-								gap: 16px;
-								transition: all 0.25s ease;
-								box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-								}
+		.btn-move {
+			background: #fff;
+			color: #2f7d3a;
+			border: 1.5px solid #cbe0ce;
+		}
 
-								.shop-card:hover {
-								transform: translateY(-2px);
-								box-shadow: 0 8px 25px rgba(21, 74, 34, 0.08);
-								border-color: #cbe0ce;
-								}
+		.btn-move:hover {
+			background: #f0f8ed;
+			transform: translateY(-2px);
+		}
 
-								.shop-card.done {
-								background: #fafbfa;
-								opacity: 0.65;
-								border-color: #eee;
-								box-shadow: none;
-								transform: none;
-								}
+		.btn-clear {
+			background: #fff0f0;
+			color: #d64a4a;
+			border: 1.5px solid #f5c2c2;
+			padding: 12px 18px;
+		}
 
-								.shop-card.done .item-name { text-decoration: line-through; color: #888; }
+		.btn-clear:hover {
+			background: #ffe0e0;
+			transform: translateY(-2px);
+		}
 
-								/* Custom Checkbox */
-								.custom-check {
-								width: 32px; height: 32px;
-								border-radius: 50%;
-								border: 2px solid #cdd8ce;
-								background: #fff;
-								cursor: pointer;
-								display: flex; align-items: center; justify-content: center;
-								transition: all 0.2s ease;
-								flex-shrink: 0;
-								padding: 0;
-								}
+		/* Shopping Cards Grid */
+		.shop-grid {
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+		}
 
-								.custom-check:hover { border-color: #2f7d3a; background: #f4fbf2; }
-								.custom-check svg {
-								width: 18px; height: 18px;
-								stroke: #fff; stroke-width: 3; fill: none;
-								transition: transform 0.2s ease;
-								transform: scale(0);
-								pointer-events: none;
-								}
+		.shop-card {
+			background: #fff;
+			border: 1px solid #e5ede6;
+			border-radius: 18px;
+			padding: 16px 20px;
+			display: flex;
+			align-items: center;
+			gap: 16px;
+			transition: all 0.25s ease;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+		}
 
-								.shop-card.done .custom-check { background: #2f7d3a; border-color: #2f7d3a; }
-								.shop-card.done .custom-check svg { transform: scale(1); }
+		.shop-card:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 8px 25px rgba(21, 74, 34, 0.08);
+			border-color: #cbe0ce;
+		}
 
-								/* Real Photo Container */
-								.item-image {
-								width: 56px; height: 56px;
-								border-radius: 14px;
-								overflow: hidden;
-								flex-shrink: 0;
-								background: #f0f4f0;
-								box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-								}
+		.shop-card.done {
+			background: #fafbfa;
+			opacity: 0.65;
+			border-color: #eee;
+			box-shadow: none;
+			transform: none;
+		}
 
-								.item-image img { width: 100%; height: 100%; object-fit: cover; }
+		.shop-card.done .item-name {
+			text-decoration: line-through;
+			color: #888;
+		}
 
-								.item-details { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+		/* Custom Checkbox */
+		.custom-check {
+			width: 32px;
+			height: 32px;
+			border-radius: 50%;
+			border: 2px solid #cdd8ce;
+			background: #fff;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			transition: all 0.2s ease;
+			flex-shrink: 0;
+			padding: 0;
+		}
 
-								.item-name {
-								font-family: var(--font-h);
-								font-size: 1.1rem;
-								color: #1d4638;
-								font-weight: 600;
-								}
+		.custom-check:hover {
+			border-color: #2f7d3a;
+			background: #f4fbf2;
+		}
 
-								.item-badge {
-								background: #eaf5e8;
-								color: #2b713a;
-								padding: 3px 10px;
-								border-radius: 8px;
-								font-weight: 600;
-								font-size: 0.75rem;
-								width: fit-content;
-								text-transform: uppercase;
-								letter-spacing: 0.5px;
-								}
+		.custom-check svg {
+			width: 18px;
+			height: 18px;
+			stroke: #fff;
+			stroke-width: 3;
+			fill: none;
+			transition: transform 0.2s ease;
+			transform: scale(0);
+			pointer-events: none;
+		}
 
-								.delete-btn {
-								width: 40px; height: 40px;
-								border-radius: 12px; border: none;
-								background: transparent; color: #b3c0b4;
-								cursor: pointer; display: flex; align-items: center; justify-content: center;
-								transition: all 0.2s; flex-shrink: 0;
-								}
+		.shop-card.done .custom-check {
+			background: #2f7d3a;
+			border-color: #2f7d3a;
+		}
 
-								.delete-btn:hover { background: #fff0f0; color: #d64a4a; }
-								.delete-btn svg { pointer-events: none; }
+		.shop-card.done .custom-check svg {
+			transform: scale(1);
+		}
 
-								.empty-state {
-								text-align: center; padding: 60px 20px;
-								background: #fff; border-radius: 24px; border: 2px dashed #dcebd8;
-								}
-								.empty-state img { width: 120px; opacity: 0.8; margin-bottom: 20px; }
+		/* Real Photo Container */
+		.item-image {
+			width: 56px;
+			height: 56px;
+			border-radius: 14px;
+			overflow: hidden;
+			flex-shrink: 0;
+			background: #f0f4f0;
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+		}
 
-								@media (max-width: 768px) {
-								.action-bar { flex-wrap: wrap; }
-								.action-bar input { width: 100%; flex: none; margin-bottom: 8px; }
-								.btn-premium { flex: 1; justify-content: center; padding: 12px 10px; }
-								.hero-premium { padding: 20px; min-height: 160px; }
-								.hero-premium h1 { font-size: 1.8rem; }
-								}
-							</style>
-						</head>
-	<body data-page="shopping.html" data-title="Shopping list">
-		<div class="main">
-			<main class="content">
+		.item-image img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+		}
 
-				<!-- Clean Hero Section (No Button) -->
-				<section class="hero hero-premium">
-					<div>
-						<h1>Your Shopping List</h1>
-						<p>Easily manage what you need to buy. Add items manually or type to get smart suggestions from our grocery list.</p>
-					</div>
-				</section>
+		.item-details {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+		}
 
-				<!-- Action Bar -->
-				<div class="action-bar">
-					<datalist id="grocery-suggestions"></datalist>
-					<input id="nm" list="grocery-suggestions" placeholder="Type to search (e.g. Rice, Onion, Coconut...)" autocomplete="off">
+		.item-name {
+			font-family: var(--font-h);
+			font-size: 1.1rem;
+			color: #1d4638;
+			font-weight: 600;
+		}
 
-						<button class="btn-premium btn-add" id="add" type="button">
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-								<line x1="12" y1="5" x2="12" y2="19"></line>
-								<line x1="5" y1="12" x2="19" y2="12"></line>
-							</svg>
-							Add
-						</button>
-						<button class="btn-premium btn-move" id="mv" type="button">
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-								<polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-								<line x1="12" y1="22.08" x2="12" y2="12"></line>
-							</svg>
-							To Pantry
-						</button>
-						<button class="btn-premium btn-clear" id="clr" type="button" title="Clear List">🗑️</button>
-					</div>
+		.item-badge {
+			background: #eaf5e8;
+			color: #2b713a;
+			padding: 3px 10px;
+			border-radius: 8px;
+			font-weight: 600;
+			font-size: 0.75rem;
+			width: fit-content;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
 
-				<div id="list" class="shop-grid"></div>
+		.delete-btn {
+			width: 40px;
+			height: 40px;
+			border-radius: 12px;
+			border: none;
+			background: transparent;
+			color: #b3c0b4;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			transition: all 0.2s;
+			flex-shrink: 0;
+		}
 
-			</main>
-		</div>
-		<script src="js/data.js"></script>
-		<script src="js/app.js"></script>
-		<script>
-			document.addEventListener('DOMContentLoaded', () => {
+		.delete-btn:hover {
+			background: #fff0f0;
+			color: #d64a4a;
+		}
+
+		.delete-btn svg {
+			pointer-events: none;
+		}
+
+		.empty-state {
+			text-align: center;
+			padding: 60px 20px;
+			background: #fff;
+			border-radius: 24px;
+			border: 2px dashed #dcebd8;
+		}
+
+		.empty-state img {
+			width: 120px;
+			opacity: 0.8;
+			margin-bottom: 20px;
+		}
+
+		@media (max-width: 768px) {
+			.action-bar {
+				flex-wrap: wrap;
+			}
+
+			.action-bar input {
+				width: 100%;
+				flex: none;
+				margin-bottom: 8px;
+			}
+
+			.btn-premium {
+				flex: 1;
+				justify-content: center;
+				padding: 12px 10px;
+			}
+
+			.hero-premium {
+				padding: 20px;
+				min-height: 160px;
+			}
+
+			.hero-premium h1 {
+				font-size: 1.8rem;
+			}
+		}
+	</style>
+</head>
+
+<body data-page="shopping.html" data-title="Shopping list">
+	<div class="main">
+		<main class="content">
+
+			<!-- Clean Hero Section (No Button) -->
+			<section class="hero hero-premium">
+				<div>
+					<h1>Your Shopping List</h1>
+					<p>Easily manage what you need to buy. Add items manually or type to get smart suggestions from our
+						grocery list.</p>
+				</div>
+			</section>
+
+			<!-- Action Bar -->
+			<div class="action-bar">
+				<datalist id="grocery-suggestions"></datalist>
+				<input id="nm" list="grocery-suggestions" placeholder="Type to search (e.g. Rice, Onion, Coconut...)"
+					autocomplete="off">
+
+				<button class="btn-premium btn-add" id="add" type="button">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+						stroke-linecap="round">
+						<line x1="12" y1="5" x2="12" y2="19"></line>
+						<line x1="5" y1="12" x2="19" y2="12"></line>
+					</svg>
+					Add
+				</button>
+				<button class="btn-premium btn-move" id="mv" type="button">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+						stroke-linecap="round" stroke-linejoin="round">
+						<path
+							d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+						</path>
+						<polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+						<line x1="12" y1="22.08" x2="12" y2="12"></line>
+					</svg>
+					To Pantry
+				</button>
+				<button class="btn-premium btn-clear" id="clr" type="button" title="Clear List">🗑️</button>
+			</div>
+
+			<div id="list" class="shop-grid"></div>
+
+		</main>
+	</div>
+	<script src="js/data.js"></script>
+	<script src="js/app.js"></script>
+	<script src="js/api.js"></script>
+	<script>
+		document.addEventListener('DOMContentLoaded', () => {
 			const $ = id => document.getElementById(id);
 
 			// 1. Setup State
@@ -241,22 +357,22 @@
 
 			// 2. Sri Lankan Groceries List (50+ items)
 			const sriLankanGroceries = [
-			"Samba Rice", "Nadu Rice", "Red Raw Rice", "Red Dhal", "Green Gram", "Chickpeas", "Cowpea",
-			"Coconut", "Onion", "Big Onion", "Garlic", "Ginger", "Potato", "Carrot", "Tomato", "Brinjal",
-			"Pumpkin", "Snake Gourd", "Okra", "Green Beans", "Cabbage", "Gotukola", "Mukunuwenna", "Spinach",
-			"Banana", "Papaya", "Mango", "Pineapple", "Lime", "Avocado", "Apple",
-			"Chicken", "Fish", "Maldive Fish", "Eggs", "Prawns",
-			"Fresh Milk", "Milk Powder", "Curd", "Butter", "Cheese",
-			"Chili Powder", "Turmeric", "Roasted Curry Powder", "Black Pepper", "Cinnamon", "Cardamom", "Cloves",
-			"Coconut Oil", "Soy Sauce", "Sugar", "Salt", "Ceylon Tea", "Coffee", "Kurakkan Flour", "Wheat Flour", "Bread", "Oats", "Pasta"
+				"Samba Rice", "Nadu Rice", "Red Raw Rice", "Red Dhal", "Green Gram", "Chickpeas", "Cowpea",
+				"Coconut", "Onion", "Big Onion", "Garlic", "Ginger", "Potato", "Carrot", "Tomato", "Brinjal",
+				"Pumpkin", "Snake Gourd", "Okra", "Green Beans", "Cabbage", "Gotukola", "Mukunuwenna", "Spinach",
+				"Banana", "Papaya", "Mango", "Pineapple", "Lime", "Avocado", "Apple",
+				"Chicken", "Fish", "Maldive Fish", "Eggs", "Prawns",
+				"Fresh Milk", "Milk Powder", "Curd", "Butter", "Cheese",
+				"Chili Powder", "Turmeric", "Roasted Curry Powder", "Black Pepper", "Cinnamon", "Cardamom", "Cloves",
+				"Coconut Oil", "Soy Sauce", "Sugar", "Salt", "Ceylon Tea", "Coffee", "Kurakkan Flour", "Wheat Flour", "Bread", "Oats", "Pasta"
 			];
 
 			// Populate Datalist for Autocomplete
 			$("grocery-suggestions").innerHTML = sriLankanGroceries.map(item => `<option value="${item}">
 				`).join('');
 
-				// 3. Exact Image Dictionary (Highly Reliable 100% Working HD Real Photos)
-				const IMAGE_MAP = {
+			// 3. Exact Image Dictionary (Highly Reliable 100% Working HD Real Photos)
+			const IMAGE_MAP = {
 				// Carbs & Grains
 				"samba rice": "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=150&h=150&fit=crop",
 				"nadu rice": "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=150&h=150&fit=crop",
@@ -322,10 +438,10 @@
 				"salt": "https://images.unsplash.com/photo-1615486171448-4fd6360ee1d4?w=150&h=150&fit=crop",
 				"tea": "https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?w=150&h=150&fit=crop",
 				"coffee": "https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=150&h=150&fit=crop"
-				};
+			};
 
-				// 4. Category Mapping
-				function getCategory(name) {
+			// 4. Category Mapping
+			function getCategory(name) {
 				const n = name.toLowerCase();
 				if (/chicken|beef|pork|meat|fish|salmon|tuna|egg|prawn|maldive|dhal|green gram|chickpeas|cowpea/.test(n)) return "Protein";
 				if (/milk|cheese|yogurt|dairy|butter|cream|curd/.test(n)) return "Dairy";
@@ -333,10 +449,10 @@
 				if (/rice|bread|flour|grain|quinoa|pasta|nut|seed|oats|kurakkan|sugar|salt/.test(n)) return "Pantry";
 				if (/chili|turmeric|curry|pepper|cinnamon|cardamom|cloves|oil|sauce|tea|coffee/.test(n)) return "Spices & Oils";
 				return "Other";
-				}
+			}
 
-				// 5. Image Resolver with Bulletproof Fallback
-				function getImage(name) {
+			// 5. Image Resolver with Bulletproof Fallback
+			function getImage(name) {
 				const n = name.toLowerCase().trim();
 				// If exact match exists
 				if (IMAGE_MAP[n]) return IMAGE_MAP[n];
@@ -353,30 +469,30 @@
 
 				// Absolute final fallback: A generic grocery basket image
 				return "https://images.unsplash.com/photo-1542838132-92c53300491e?w=150&h=150&fit=crop";
-				}
+			}
 
-				// 6. Initialize with default items if empty
-				if (S.length === 0) {
+			// 6. Initialize with default items if empty
+			if (S.length === 0) {
 				S = sriLankanGroceries.slice(0, 15).map(item => ({
-				id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-				name: item,
-				done: false
+					id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+					name: item,
+					done: false
 				}));
 				save();
-				}
+			}
 
-				// 7. Render Function
-				function draw() {
+			// 7. Render Function
+			function draw() {
 				const listEl = $("list");
 
 				if (!S.length) {
-				listEl.innerHTML = `
+					listEl.innerHTML = `
 				<div class="empty-state">
 					<img src="https://cdn-icons-png.flaticon.com/512/11329/11329060.png" alt="Empty cart">
 						<h3 style="color: #1d4638; font-size: 1.4rem;">Your list is empty</h3>
 						<p class="muted" style="margin-top: 8px;">Use the search box above to add items.</p>
 					</div>`;
-				return;
+					return;
 				}
 
 				const sorted = [...S].sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
@@ -411,80 +527,81 @@
 				`).join('');
 
 				save();
-				}
+			}
 
-				// 8. Event Listeners
-				$("add").addEventListener("click", () => {
+			// 8. Event Listeners
+			$("add").addEventListener("click", () => {
 				const input = $("nm");
 				const val = input.value.trim();
 				if (val && !S.some(x => x.name.toLowerCase() === val.toLowerCase())) {
-				S.push({
-				id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-				name: val,
-				done: false
-				});
-				input.value = "";
-				draw();
+					S.push({
+						id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+						name: val,
+						done: false
+					});
+					input.value = "";
+					draw();
 				}
-				});
+			});
 
-				$("nm").addEventListener("keypress", (e) => { if (e.key === "Enter") $("add").click(); });
+			$("nm").addEventListener("keypress", (e) => { if (e.key === "Enter") $("add").click(); });
 
-				// Move to Pantry
-				$("mv").addEventListener("click", () => {
+			// Move to Pantry
+			$("mv").addEventListener("click", () => {
 				const boughtItems = S.filter(i => i.done);
 
 				if (boughtItems.length === 0) {
-				alert("Please check (✓) the items you have bought first!");
-				return;
+					alert("Please check (✓) the items you have bought first!");
+					return;
 				}
 
 				const P = _l("vp_pantry", []);
 				boughtItems.forEach(i => {
-				P.push({
-				id: Date.now() + Math.random(),
-				name: i.name,
-				cat: getCategory(i.name),
-				qty: 1,
-				unit: "pcs",
-				exp: ""
-				});
+					P.push({
+						id: Date.now() + Math.random(),
+						name: i.name,
+						cat: getCategory(i.name),
+						qty: 1,
+						unit: "pcs",
+						exp: ""
+					});
 				});
 
 				_s("vp_pantry", P);
 				S = S.filter(i => !i.done); // Remove bought items from shopping list
 				draw();
-				});
+			});
 
-				// Clear List
-				$("clr").addEventListener("click", () => {
+			// Clear List
+			$("clr").addEventListener("click", () => {
 				if (confirm("Clear entire shopping list?")) {
-				S = [];
-				draw();
+					S = [];
+					draw();
 				}
-				});
+			});
 
-				// Event Delegation for Cards
-				$("list").addEventListener("click", (e) => {
+			// Event Delegation for Cards
+			$("list").addEventListener("click", (e) => {
 				const checkBtn = e.target.closest('[data-check]');
 				if (checkBtn) {
-				const itemId = checkBtn.getAttribute('data-check');
-				const item = S.find(i => String(i.id) === String(itemId));
-				if (item) { item.done = !item.done; draw(); }
-				return;
+					const itemId = checkBtn.getAttribute('data-check');
+					const item = S.find(i => String(i.id) === String(itemId));
+					if (item) { item.done = !item.done; draw(); }
+					return;
 				}
 
 				const deleteBtn = e.target.closest('[data-delete]');
 				if (deleteBtn) {
-				const itemId = deleteBtn.getAttribute('data-delete');
-				S = S.filter(i => String(i.id) !== String(itemId));
-				draw();
+					const itemId = deleteBtn.getAttribute('data-delete');
+					S = S.filter(i => String(i.id) !== String(itemId));
+					draw();
 				}
-				});
+			});
 
-				// Initial render
-				draw();
-				});
-			</script>
-	</body>
+			// Initial render
+			draw();
+		});
+	</script>
+</body>
+
 </html>
