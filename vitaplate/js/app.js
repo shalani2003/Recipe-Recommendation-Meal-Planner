@@ -1,5 +1,32 @@
 // Shared app shell: sidebar + top bar, injected on every page
+const THEME_STORAGE_KEY="vp_theme";
+const storedTheme=localStorage.getItem(THEME_STORAGE_KEY);
+document.documentElement.dataset.theme=storedTheme==="dark"?"dark":"light";
 const NAV=[["index.html","🏠","Dashboard"],["pantry.html","🥕","Pantry"],["recipes.html","📖","Recipes"],["planner.html","📅","Meal planner"],["shopping.html","🛒","Shopping list"],["health.html","⚖️","Health & BMI"],["profile.html","👤","Profile"],["settings.html","⚙️","Settings"]];
+function initializeThemeToggle(){
+  const button=document.createElement("button");
+  button.type="button";
+  button.className="theme-toggle";
+  button.innerHTML='<svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path></svg><svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"></path></svg><span class="theme-toggle-text"></span>';
+  const updateButton=()=>{
+    const isDark=document.documentElement.dataset.theme==="dark";
+    const label=isDark?"Switch to light mode":"Switch to dark mode";
+    button.setAttribute("aria-label",label);
+    button.setAttribute("aria-pressed",String(isDark));
+    button.title=label;
+    button.querySelector(".theme-toggle-text").textContent=isDark?"Light mode":"Dark mode";
+  };
+  button.addEventListener("click",()=>{
+    const nextTheme=document.documentElement.dataset.theme==="dark"?"light":"dark";
+    document.documentElement.dataset.theme=nextTheme;
+    localStorage.setItem(THEME_STORAGE_KEY,nextTheme);
+    updateButton();
+  });
+  const topbar=document.querySelector(".topbar");
+  if(topbar)topbar.append(button);
+  else document.body.append(button);
+  updateButton();
+}
 function updateShellAvatar(){
   const avatar=document.getElementById("shellAvatar");
   if(!avatar)return;
@@ -35,6 +62,7 @@ function showAccountError(message){
   else show();
 }
 function buildShell(){
+  if(!document.body.dataset.page)return;
   const page=document.body.dataset.page, title=document.body.dataset.title||"";
   const links=NAV.map(([h,i,t])=>`<a href="${h}" ${h===page?'aria-current="page"':''}><span aria-hidden="true">${i}</span>${t}</a>`).join("");
   const u=VP.user;
@@ -49,10 +77,9 @@ function buildShell(){
   const pinned=_l("vp_nav_pinned",false);
   const updatePin=()=>{document.body.classList.toggle("nav-pinned",pinnedState);pinBtn.setAttribute("aria-pressed",pinnedState);pinBtn.textContent=pinnedState?"📌 Pinned":"📌 Pin"};
   let pinnedState=pinned;
-  const isMobile=()=>window.matchMedia("(max-width: 820px)").matches;
-  const toggle=()=>{if(!pinnedState||isMobile())document.body.classList.toggle("nav-open")};
+  const toggle=()=>{if(!pinnedState)document.body.classList.toggle("nav-open")};
   document.getElementById("menuBtn").onclick=toggle;
-  pinBtn.onclick=()=>{pinnedState=!pinnedState;_s("vp_nav_pinned",pinnedState);if(pinnedState&&!isMobile())document.body.classList.add("nav-open");else if(isMobile())document.body.classList.remove("nav-open");updatePin()};
+  pinBtn.onclick=()=>{pinnedState=!pinnedState;_s("vp_nav_pinned",pinnedState);if(pinnedState)document.body.classList.add("nav-open");updatePin()};
   document.getElementById("scrim").onclick=toggle;
   document.getElementById("logout").onclick=async()=>{
     try{
@@ -69,7 +96,10 @@ function setRing(el,value,goal){
   el.querySelector(".fill").style.strokeDasharray=c;
   el.querySelector(".fill").style.strokeDashoffset=c*(1-pct);
 }
-document.addEventListener("DOMContentLoaded",buildShell);
+document.addEventListener("DOMContentLoaded",()=>{
+  buildShell();
+  initializeThemeToggle();
+});
 
 async function accountRequest(path){
   const response=await fetch(path,{credentials:"same-origin"});
@@ -102,8 +132,10 @@ async function loadAccountData(){
   window.dispatchEvent(new Event("vp-data-ready"));
 }
 
-VP.ready=loadAccountData().catch(error=>{
-  VP.apiError=error.message||"Could not load your account data.";
-  console.error("Could not load account data:",error);
-  showAccountError(VP.apiError);
-});
+if(document.body.dataset.page){
+  VP.ready=loadAccountData().catch(error=>{
+    VP.apiError=error.message||"Could not load your account data.";
+    console.error("Could not load account data:",error);
+    showAccountError(VP.apiError);
+  });
+}
