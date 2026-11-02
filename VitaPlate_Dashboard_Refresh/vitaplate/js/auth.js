@@ -5,7 +5,13 @@ const users=()=>_l("vp_users",[]);
 function fieldErr(id,msg){const el=$(id);el.classList.toggle("bad",!!msg);$(id+"Err").textContent=msg||"";return !msg}
 function showAlert(m){const a=$("alert");a.textContent=m;a.classList.add("show")}
 function startSession(u){_s("vp_session",{email:u.email});_s("vp_user",{..._l("vp_user",{}),name:u.name});location.href="index.html"}
-document.querySelectorAll("[data-pw]").forEach(b=>b.onclick=()=>{const i=$(b.dataset.pw),s=i.type==="password";i.type=s?"text":"password";b.textContent=s?"Hide":"Show"});
+document.querySelectorAll("[data-pw]").forEach(b=>b.onclick=()=>{
+ const i=$(b.dataset.pw),s=i.type==="password",label=b.getAttribute("aria-label").replace(/^(Show|Hide) /,"");
+ i.type=s?"text":"password";
+ b.textContent=s?"Hide":"Show";
+ b.setAttribute("aria-pressed",String(s));
+ b.setAttribute("aria-label",`${s?"Hide":"Show"} ${label}`);
+});
 const emailOk=e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 if(_l("vp_session",null))location.replace("index.html");
 if($("loginForm"))$("loginForm").onsubmit=async e=>{e.preventDefault();$("alert").classList.remove("show");
