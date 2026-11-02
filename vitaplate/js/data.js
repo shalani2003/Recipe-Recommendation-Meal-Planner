@@ -1,4 +1,4 @@
-// Mock data + shared helpers (no real API - per project charter)
+// Shared sample catalog and helpers; account state is hydrated from the API.
 const _l=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch{return d}};
 const _s=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 window.VP={
