@@ -131,17 +131,10 @@
         // DOM Helper
         const $ = id => document.getElementById(id);
 
-        // Load Saved Values from Local Storage
-        const u = readHealth();
-        const profile = _l("vp_profile", {});
-        $("h").value = u.h ?? profile.height ?? "";
-        $("w").value = u.w ?? profile.weight ?? "";
-        $("t").value = u.t ?? "";
-
         const numberInRange = (value, limits) => Number.isFinite(value) && value >= limits.min && value <= limits.max;
 
         // Calculate BMI and keep the optional target from affecting invalid results.
-        function calc() {
+        async function calc() {
             const heightText = $("h").value.trim();
             const weightText = $("w").value.trim();
             const targetText = $("t").value.trim();
@@ -175,12 +168,6 @@
             const heightM = heightCm / 100;
             const b = weightKg / (heightM * heightM);
             const roundedBmi = Number(b.toFixed(1));
-            const savedHealth = readHealth();
-            const journeyStartWeight = targetKg === null
-                ? ""
-                : savedHealth.t === targetKg && Number.isFinite(savedHealth.startWeight)
-                  ? savedHealth.startWeight
-                  : weightKg;
             if (targetKg !== null) {
                 const targetBmi = targetKg / (heightM * heightM);
                 if (!numberInRange(targetBmi, HEALTH_LIMITS.bmi)) {
@@ -192,12 +179,28 @@
                 }
             }
 
-            saveHealth({
-                h: heightCm,
-                w: weightKg,
-                t: targetKg === null ? "" : targetKg,
-                startWeight: journeyStartWeight
-            });
+            let response, result;
+            try {
+                response = await fetch("/api/profile", {
+                    method: "PUT",
+                    credentials: "same-origin",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({height: heightCm, weight: weightKg, target_weight: targetKg})
+                });
+                result = await response.json().catch(() => ({}));
+            } catch {
+                $("out").textContent = "Cannot reach the server. Your health details were not saved.";
+                return;
+            }
+            if (response.status === 401) {
+                location.replace("login.html");
+                return;
+            }
+            if (!response.ok) {
+                $("out").textContent = result.error || "Your health details could not be saved.";
+                return;
+            }
+            VP.profile = result;
 
             const c = roundedBmi < 18.5 ? "Underweight" : roundedBmi < 25 ? "Healthy" : roundedBmi < 30 ? "Overweight" : "Obese";
             const pos = Math.min(Math.max((b - 12) / (40 - 12), 0), 1) * 100;
@@ -205,14 +208,9 @@
             if (targetKg !== null) {
                 const difference = weightKg - targetKg;
                 if (difference > 0) {
-                    const totalToLose = journeyStartWeight - targetKg;
-                    const lost = journeyStartWeight - weightKg;
-                    const progress = totalToLose > 0
-                        ? Math.min(Math.max(lost / totalToLose * 100, 0), 100)
-                        : 0;
-                    journey = `${difference.toFixed(1)} kg to lose · Weight-loss progress: ${Math.round(progress)}%`;
+                    journey = `${difference.toFixed(1)} kg to lose to reach your target.`;
                 } else if (difference === 0) {
-                    journey = "You are at your target weight · Weight-loss progress: 100%";
+                    journey = "You are at your target weight.";
                 } else {
                     journey = `${Math.abs(difference).toFixed(1)} kg to gain · This is not a weight-loss journey.`;
                 }
@@ -234,9 +232,17 @@
             `;
         }
 
-        // Event Listener & Initial Run
         $("go").onclick = calc;
-        calc();
+        VP.ready.then(() => {
+            if (VP.apiError) {
+                $("out").textContent = VP.apiError;
+                return;
+            }
+            $("h").value = VP.profile.height ?? "";
+            $("w").value = VP.profile.weight ?? "";
+            $("t").value = VP.profile.target_weight ?? "";
+            if ($("h").value && $("w").value) calc();
+        });
     </script>
 </body>
 </html>

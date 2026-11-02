@@ -1,43 +1,7 @@
 // Shared sample catalog and helpers; account state is hydrated from the API.
 const _l=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch{return d}};
 const _s=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
-const AGE_LIMITS={min:1,max:120};
-const CALORIE_GOAL_LIMITS={min:1000,max:4000};
 const HEALTH_LIMITS={height:{min:100,max:230},weight:{min:25,max:250},bmi:{min:18.5,max:40}};
-const readHealth=()=>_l("vp_health",{});
-const saveUserName=name=>{
-  const user={..._l("vp_user",{}),name};
-  _s("vp_user",user);
-  const session=_l("vp_session",null), accounts=_l("vp_users",[]);
-  if(session?.email){
-    const nextAccounts=accounts.map(account=>account.email===session.email?{...account,name}:account);
-    _s("vp_users",nextAccounts);
-  }
-  return user;
-};
-const saveHealth=health=>{
-  const next={...readHealth(),...health};
-  _s("vp_health",next);
-  const profile=_l("vp_profile",{});
-  if(Object.prototype.hasOwnProperty.call(next,"h"))profile.height=next.h;
-  if(Object.prototype.hasOwnProperty.call(next,"w"))profile.weight=next.w;
-  _s("vp_profile",profile);
-};
-const resetUserData=()=>{
-  const session=_l("vp_session",null);
-  const accounts=_l("vp_users",[]);
-  const account=session?.email?accounts.find(item=>item.email===session.email):null;
-  Object.keys(localStorage)
-    .filter(key=>key.startsWith("vp_")&&!["vp_session","vp_users"].includes(key))
-    .forEach(key=>localStorage.removeItem(key));
-  if(session)_s("vp_session",session);
-  if(accounts.length){
-    _s("vp_users",accounts.map(item=>item.email===session?.email
-      ? {...item,profilePicture:""}
-      : item));
-  }
-  if(account)_s("vp_user",{name:account.name});
-};
 window.VP={
   user:{name:"Friend",goalKcal:1800,profilePicture:"",macros:{protein:[62,90],carbs:[140,210],fat:[38,60]}},
   pantry:[],
