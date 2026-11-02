@@ -162,7 +162,7 @@
 								box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 								}
 
-								.item-image img { width: 100%; height: 100%; object-fit: cover; }
+								.item-image img { display: block; width: 100%; height: 100%; object-fit: cover; }
 
 								.item-details { flex: 1; display: flex; flex-direction: column; gap: 6px; }
 
@@ -350,6 +350,7 @@
 				"pasta": "https://images.unsplash.com/photo-1551462147-37885acc36f1?w=150&h=150&fit=crop",
 				"kurakkan flour": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=150&h=150&fit=crop",
 				"wheat flour": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=150&h=150&fit=crop",
+				"flour": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=150&h=150&fit=crop",
 
 				// Veggies & Fruits
 				"coconut": "https://images.unsplash.com/photo-1526318896980-cf78c088247c?w=150&h=150&fit=crop",
@@ -365,6 +366,7 @@
 				"snake gourd": "https://images.unsplash.com/photo-1590779033100-9f60a05a013d?w=150&h=150&fit=crop",
 				"okra": "https://images.unsplash.com/photo-1628603576885-2a834185d3b7?w=150&h=150&fit=crop",
 				"green beans": "https://images.unsplash.com/photo-1567375698348-5d9d5ae99de0?w=150&h=150&fit=crop",
+				"broccoli": "/assets/food/chickenandbrocoli.jpg",
 				"cabbage": "https://images.unsplash.com/photo-1550147760-44c9966d6bc7?w=150&h=150&fit=crop",
 				"gotukola": "https://images.unsplash.com/photo-1590779033100-9f60a05a013d?w=150&h=150&fit=crop",
 				"mukunuwenna": "https://images.unsplash.com/photo-1590779033100-9f60a05a013d?w=150&h=150&fit=crop",
@@ -393,6 +395,7 @@
 				"chili powder": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=150&h=150&fit=crop",
 				"turmeric": "https://images.unsplash.com/photo-1615485291234-9d6942d7d5a0?w=150&h=150&fit=crop",
 				"roasted curry powder": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=150&h=150&fit=crop",
+				"curry powder": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=150&h=150&fit=crop",
 				"black pepper": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=150&h=150&fit=crop",
 				"cinnamon": "https://images.unsplash.com/photo-1509358271058-acd22cc93898?w=150&h=150&fit=crop",
 				"cardamom": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=150&h=150&fit=crop",
@@ -416,25 +419,12 @@
 				return "Other";
 				}
 
-				// 5. Image Resolver with Bulletproof Fallback
-				function getImage(name) {
-				const n = name.toLowerCase().trim();
-				// If exact match exists
-				if (IMAGE_MAP[n]) return IMAGE_MAP[n];
-
-				// Fallback matching logic based on keywords
-				if (/chicken|beef|pork|meat/.test(n)) return IMAGE_MAP["chicken"];
-				if (/fish|prawn|seafood/.test(n)) return IMAGE_MAP["fish"];
-				if (/rice|grain|quinoa/.test(n)) return IMAGE_MAP["samba rice"];
-				if (/dhal|lentil|gram|bean/.test(n)) return IMAGE_MAP["red dhal"];
-				if (/milk|dairy/.test(n)) return IMAGE_MAP["milk"];
-				if (/tomato|vegetable|broccoli|carrot|potato|greens/.test(n)) return IMAGE_MAP["tomato"];
-				if (/onion|garlic|ginger/.test(n)) return IMAGE_MAP["onion"];
-				if (/oil|sauce|spice|powder|pepper/.test(n)) return IMAGE_MAP["coconut oil"];
-
-				// Absolute final fallback: A generic grocery basket image
-				return "https://images.unsplash.com/photo-1542838132-92c53300491e?w=150&h=150&fit=crop";
-				}
+				// 5. Resolve ingredient images and use a local fallback for failed URLs.
+				const SHOP_IMAGE_FALLBACK = "assets/food/shopping-placeholder.svg";
+				const getImage = item => VPShopping.resolveShoppingImage(item, IMAGE_MAP, SHOP_IMAGE_FALLBACK);
+				const escapeHtml = value => String(value == null ? "" : value).replace(/[&<>"']/g, character => ({
+					"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+				})[character]);
 
 				const status = message => $("shopStatus").textContent = message;
 
@@ -458,24 +448,23 @@
 				listEl.innerHTML = sorted.map(item => `
 				<div class="shop-card ${item.done ? 'done' : ''}">
 
-					<button type="button" class="custom-check" data-check="${item.id}" aria-label="Toggle ${item.name}">
+					<button type="button" class="custom-check" data-check="${escapeHtml(item.id)}" aria-label="Toggle ${escapeHtml(item.name)}">
 						<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
 							<polyline points="20 6 9 17 4 12"></polyline>
 						</svg>
 					</button>
 
 					<div class="item-image">
-						<!-- Double-layered Fallback (If Image fails, it loads a safe grocery image) -->
-						<img src="${getImage(item.name)}" alt="${item.name}" loading="lazy" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=150&h=150&fit=crop';">
-        </div>
+						<img src="${escapeHtml(getImage(item))}" alt="${escapeHtml(item.name)}" loading="lazy" data-fallback="${SHOP_IMAGE_FALLBACK}" onerror="this.onerror=null;this.src=this.dataset.fallback">
+					</div>
 
 					<div class="item-details">
-						<span class="item-name">${item.name}</span>
+						<span class="item-name">${escapeHtml(item.name)}</span>
 						${VPShopping.formatQuantity(item) ? `<span class="item-quantity">${VPShopping.formatQuantity(item)}</span>` : ""}
 						<span class="item-badge">${getCategory(item.name)}</span>
 					</div>
 
-					<button type="button" class="delete-btn" data-delete="${item.id}" aria-label="Remove ${item.name}">
+					<button type="button" class="delete-btn" data-delete="${escapeHtml(item.id)}" aria-label="Remove ${escapeHtml(item.name)}">
 						<svg viewBox="0 0 24 24" width="20" height="20" stroke-linecap="round" stroke-linejoin="round">
 							<line x1="18" y1="6" x2="6" y2="18"></line>
 							<line x1="6" y1="6" x2="18" y2="18"></line>
@@ -517,6 +506,8 @@
 						&& item.name === right[index].name
 						&& item.quantity === right[index].quantity
 						&& item.unit === right[index].unit
+						&& item.image === right[index].image
+						&& item.recipeImage === right[index].recipeImage
 						&& item.done === right[index].done
 					);
 
