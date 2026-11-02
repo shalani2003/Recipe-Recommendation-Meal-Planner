@@ -157,12 +157,8 @@
 
     // Read saved meal plan
     const get = () => _l("vp_plan", {});
-<<<<<<< HEAD
-    let goal = VP.user.goalKcal;
-=======
     const recipes = () => [...R, ..._l("vp_recipe_catalog", [])];
-    const goal = VP.user.goalKcal;
->>>>>>> origin/main
+    let goal = VP.user.goalKcal;
 
     // Draw the weekly meal planner
     function draw() {
