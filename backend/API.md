@@ -83,6 +83,20 @@ Days are `Mon` through `Sun`; meal types are `Breakfast`, `Lunch`, and `Dinner`.
 
 Pantry writes also mirror the canonical `pantry` rows to `pantry_items`, preserving the legacy column names (`cat`, `qty`, `exp`).
 
+## Shopping list, hydration, and weight history
+
+| Method | Path | Body | Result |
+|---|---|---|---|
+| GET | `/shopping` | none | `{items: [{id, name, quantity, unit, category, done}]}` |
+| PUT | `/shopping` | `items: [{name, quantity?, unit?, category?, done?}]` | Replaces the current user's list and returns saved rows |
+| DELETE | `/shopping` | none | Clears only the current user's list |
+| GET | `/water?day=YYYY-MM-DD` | none | `{day, glasses}`; defaults to today's server date |
+| PUT | `/water` | `glasses` (0-30), optional `day` | Upserts that day's count |
+| GET | `/weight-log` | none | `{entries: [{id, weight_kg, logged_on}]}` (latest 100) |
+| POST | `/weight-log` | `weight_kg` (25-250), optional `logged_on` | Appends and returns an entry |
+
+Profile weight updates are also appended to `weight_log` only when the saved weight changes. The health page's "Log current weight" button can record another measurement explicitly.
+
 ## Recipes (temporary, until routes/recipes.py)
 
 | Method | Path | Notes |
