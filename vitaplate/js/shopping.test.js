@@ -167,6 +167,12 @@ assert.deepStrictEqual(
 );
 
 const createManualItem = context.window.VPShopping.createManualShoppingItem;
+const resolveImage = context.window.VPShopping.resolveShoppingImage;
+const imageMap = {rice: "/assets/food/rice.jpg"};
+assert.strictEqual(resolveImage({name: "Rice"}, imageMap, "/fallback.svg"), "/assets/food/rice.jpg");
+assert.strictEqual(resolveImage({name: "Rice", image: "/custom.jpg"}, imageMap, "/fallback.svg"), "/custom.jpg");
+assert.strictEqual(resolveImage({name: "Rice", recipeImage: "/recipe.jpg"}, imageMap, "/fallback.svg"), "/recipe.jpg");
+assert.strictEqual(resolveImage({name: "Unknown"}, imageMap, "/fallback.svg"), "/fallback.svg");
 const manualItem = createManualItem("  Oats  ", "1.25", "kg");
 assert.ifError(manualItem.error);
 assert.deepStrictEqual(

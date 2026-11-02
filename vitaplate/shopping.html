@@ -422,7 +422,7 @@
 				}
 
 				// 5. Resolve ingredient images and use a local fallback for failed URLs.
-				const SHOP_IMAGE_FALLBACK = "assets/food/shopping-placeholder.svg";
+				const SHOP_IMAGE_FALLBACK = "assets/food/hero-healthy-bowl.jpg";
 				const getImage = item => VPShopping.resolveShoppingImage(item, IMAGE_MAP, SHOP_IMAGE_FALLBACK);
 				const escapeHtml = value => String(value == null ? "" : value).replace(/[&<>"']/g, character => ({
 					"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"

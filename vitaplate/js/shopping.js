@@ -231,6 +231,13 @@
 		return quantity + " " + normalizeUnit(item.unit);
 	}
 
+	function resolveShoppingImage(item, imageMap, fallback) {
+		if (item && typeof item.image === "string" && item.image) return item.image;
+		if (item && typeof item.recipeImage === "string" && item.recipeImage) return item.recipeImage;
+		const name = String(item && item.name || "").trim().toLowerCase();
+		return imageMap[name] || fallback;
+	}
+
 	function createManualShoppingItem(name, rawQuantity, rawUnit) {
 		const itemName = String(name || "").trim().replace(/\s+/g, " ");
 		if (!itemName) return { error: "Enter an item name." };
@@ -475,6 +482,7 @@
 	global.VPShopping = {
 		buildFromMealPlan,
 		formatQuantity,
+		resolveShoppingImage,
 		createManualShoppingItem,
 		addManualShoppingItem,
 		deduplicateShoppingItems,
