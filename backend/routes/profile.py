@@ -1,6 +1,7 @@
 """Profile details and health measurements."""
 import json
 import math
+from datetime import date
 
 from flask import Blueprint, g, jsonify
 
@@ -103,6 +104,7 @@ def put_profile():
 
     db = get_db()
     profile = read_profile(db, g.user_id)
+    previous_weight = profile["weight"]
 
     if "name" in data:
         name, problem = clean_text(data["name"], "your name", 2, 60)
@@ -157,6 +159,11 @@ def put_profile():
         "weight_kg=excluded.weight_kg, target_kg=excluded.target_kg",
         (g.user_id, profile["height"], profile["weight"], profile["target_weight"]),
     )
+    if profile["weight"] is not None and profile["weight"] != previous_weight:
+        db.execute(
+            "INSERT INTO weight_log (user_id, weight_kg, logged_on) VALUES (?, ?, ?)",
+            (g.user_id, profile["weight"], date.today().isoformat()),
+        )
     db.execute(
         "INSERT INTO dietary (user_id, allergies) VALUES (?, ?) "
         "ON CONFLICT(user_id) DO UPDATE SET allergies = excluded.allergies",

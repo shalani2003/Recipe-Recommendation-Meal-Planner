@@ -119,6 +119,29 @@
                 <div id="out" style="margin-top: 18px;"></div>
             </section>
 
+            <section class="card" style="max-width:560px;margin:20px auto 0" aria-labelledby="waterTitle">
+                <h2 id="waterTitle">Water tracker</h2>
+                <p class="muted">Today's glasses are saved to your account.</p>
+                <div class="row" style="align-items:center;gap:12px;margin-top:12px">
+                    <button class="btn btn-ghost" id="waterDown" type="button" aria-label="Remove one glass">−</button>
+                    <strong id="waterCount" aria-live="polite">0 glasses today</strong>
+                    <button class="btn btn-primary" id="waterUp" type="button">Add a glass</button>
+                </div>
+                <p id="waterStatus" class="muted" role="status"></p>
+            </section>
+
+            <section class="card" style="max-width:560px;margin:20px auto 0" aria-labelledby="weightHistoryTitle">
+                <div class="row" style="justify-content:space-between;align-items:center;gap:12px">
+                    <div>
+                        <h2 id="weightHistoryTitle">Weight history</h2>
+                        <p class="muted">Changes saved from this page are recorded here.</p>
+                    </div>
+                    <button class="btn btn-ghost" id="logWeight" type="button">Log current weight</button>
+                </div>
+                <p id="weightLogStatus" class="muted" role="status"></p>
+                <ul id="weightHistory" class="muted" aria-live="polite"></ul>
+            </section>
+
         </main>
     </div>
 
@@ -130,6 +153,61 @@
     <script>
         // DOM Helper
         const $ = id => document.getElementById(id);
+        const requestJson = async (path, method = "GET", payload) => {
+            const response = await fetch(path, {
+                method,
+                credentials: "same-origin",
+                headers: payload === undefined ? {} : {"Content-Type": "application/json"},
+                body: payload === undefined ? undefined : JSON.stringify(payload)
+            });
+            const data = await response.json().catch(() => ({}));
+            if (response.status === 401) {
+                location.replace("login.html");
+                throw new Error("Please sign in again.");
+            }
+            if (!response.ok) throw new Error(data.error || "Could not save your health data.");
+            return data;
+        };
+        let waterGlasses = 0;
+        const today = new Date().toLocaleDateString("en-CA");
+        const renderWater = () => {
+            $("waterCount").textContent = `${waterGlasses} glass${waterGlasses === 1 ? "" : "es"} today`;
+            $("waterDown").disabled = waterGlasses <= 0;
+            $("waterUp").disabled = waterGlasses >= 30;
+        };
+        const renderWeightHistory = entries => {
+            $("weightHistory").replaceChildren(...entries.map(entry => {
+                const item = document.createElement("li");
+                item.textContent = `${entry.logged_on}: ${entry.weight_kg} kg`;
+                return item;
+            }));
+            if (!entries.length) $("weightHistory").textContent = "No weight entries yet.";
+        };
+        async function loadTracking() {
+            try {
+                const [water, history] = await Promise.all([
+                    requestJson(`/api/water?day=${today}`),
+                    requestJson("/api/weight-log")
+                ]);
+                waterGlasses = water.glasses;
+                renderWater();
+                renderWeightHistory(history.entries || []);
+            } catch (error) {
+                $("waterStatus").textContent = error.message;
+                $("weightLogStatus").textContent = error.message;
+            }
+        }
+        async function changeWater(delta) {
+            const next = Math.max(0, Math.min(30, waterGlasses + delta));
+            try {
+                const saved = await requestJson("/api/water", "PUT", {day: today, glasses: next});
+                waterGlasses = saved.glasses;
+                renderWater();
+                $("waterStatus").textContent = "Water tracker saved.";
+            } catch (error) {
+                $("waterStatus").textContent = error.message;
+            }
+        }
 
         const numberInRange = (value, limits) => Number.isFinite(value) && value >= limits.min && value <= limits.max;
 
@@ -233,11 +311,32 @@
         }
 
         $("go").onclick = calc;
+        $("waterDown").onclick = () => changeWater(-1);
+        $("waterUp").onclick = () => changeWater(1);
+        $("logWeight").onclick = async () => {
+            const weight = Number($("w").value);
+            if (!numberInRange(weight, HEALTH_LIMITS.weight)) {
+                $("weightLogStatus").textContent = "Enter a weight between 25 and 250 kg first.";
+                return;
+            }
+            try {
+                const result = await requestJson("/api/weight-log", "POST", {
+                    weight_kg: weight,
+                    logged_on: today
+                });
+                const history = await requestJson("/api/weight-log");
+                renderWeightHistory(history.entries || []);
+                $("weightLogStatus").textContent = `Logged ${result.entry.weight_kg} kg.`;
+            } catch (error) {
+                $("weightLogStatus").textContent = error.message;
+            }
+        };
         VP.ready.then(() => {
             if (VP.apiError) {
                 $("out").textContent = VP.apiError;
                 return;
             }
+            loadTracking();
             $("h").value = VP.profile.height ?? "";
             $("w").value = VP.profile.weight ?? "";
             $("t").value = VP.profile.target_weight ?? "";
