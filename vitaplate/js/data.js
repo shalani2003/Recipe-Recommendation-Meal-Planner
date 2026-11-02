@@ -57,11 +57,6 @@ const R=[
  {id:8,name:"Creamy chicken curry",kind:"bowl",time:40,kcal:560,p:42,c:22,f:32,diets:[GF,H],ing:["Chicken","Coconut","Onion","Curry powder"]}
 ];
 const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],MEALS=["Breakfast","Lunch","Dinner"];
-<<<<<<< HEAD
-const haveIng=ing=>VP.pantry.some(i=>{const a=i.name.toLowerCase(),b=ing.toLowerCase();return a.includes(b)||b.includes(a)});
-const matchPct=r=>Math.round(r.ing.filter(haveIng).length/r.ing.length*100);
-const dietOk=r=>VP.diets.every(d=>r.diets.includes(d));
-=======
 const INGREDIENT_ALIASES={
   eggs:"egg", tomatoes:"tomato", onions:"onion", carrots:"carrot", lentils:"lentil", chickpeas:"chickpea",
   peanuts:"peanut", almonds:"almond", cashews:"cashew", walnuts:"walnut", mushrooms:"mushroom",
@@ -81,14 +76,17 @@ const ingredientMatches=(pantryIngredient,recipeIngredient)=>{
   if(!pantry||!recipe)return false;
   return pantry===recipe;
 };
-const haveIng=ing=>_l("vp_pantry",[]).some(item=>ingredientMatches(item?.name,ing));
-const matchPct=r=>Math.round(r.ing.filter(haveIng).length/r.ing.length*100);
+const haveIng=ing=>VP.pantry.some(item=>ingredientMatches(item?.name,ing));
+const matchPct=r=>{
+  const ingredients=r.ing||r.ingredients||[];
+  return ingredients.length?Math.round(ingredients.filter(haveIng).length/ingredients.length*100):0;
+};
 function savedFoodRestrictions(){
-  const profile=_l("vp_profile",{}), session=_l("vp_session",null), profiles=_l("vp_diet_profiles",{});
-  const onboarding=session?.email?profiles[session.email]:null;
   const allergies=[];
   const add=value=>String(value||"").split(",").map(item=>item.trim()).filter(item=>item&&item.toLowerCase()!=="none").forEach(item=>allergies.push(item));
-  add(profile.allergies); add(profile.infections); (onboarding?.allergies||[]).forEach(add); (onboarding?.conditions||[]).forEach(add);
+  const profile=VP.profile||{};
+  const dietary=VP.dietary||{};
+  add(profile.allergies); add(profile.health_notes); (dietary.allergies||[]).forEach(add);
   return [...new Set(allergies.map(item=>item.toLowerCase()))];
 }
 const allergyIngredients={
@@ -129,8 +127,7 @@ function inferredDietOk(recipe,diet){
   if(diet==="Low sugar")return !has(["sugar","honey"]);
   return true;
 }
-const dietOk=r=>_l("vp_diets",[]).every(d=>inferredDietOk(r,d))&&!recipeHasConflict(r);
->>>>>>> origin/main
+const dietOk=r=>(VP.diets||[]).every(d=>inferredDietOk(r,d))&&!recipeHasConflict(r);
 // Cartoon food characters (inline SVG)
 function char(kind,size=90){
   const B={
