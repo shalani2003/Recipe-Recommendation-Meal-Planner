@@ -91,6 +91,8 @@ async function loadAccountData(){
   if(!profile||!settings||!pantry||!dietary)return;
   VP.user.goalKcal=profile.calorie_goal||1800;
   VP.user.profilePicture=settings.picture_url||"";
+  VP.profile=profile;
+  VP.dietary=dietary;
   VP.pantry=pantry.items;
   VP.diets=dietary.diets;
   updateShellAvatar();
