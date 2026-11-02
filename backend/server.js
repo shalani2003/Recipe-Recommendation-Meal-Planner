@@ -1,9 +1,12 @@
+// RETIRED (task P2): recipes now run inside the Flask app (backend/routes/recipes_legacy.py, later routes/recipes.py).
+// Do not start this file. It is kept only for reference and can be deleted once routes/recipes.py exists.
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
 
 const uploadDirectory = path.join(__dirname, "../vitaplate/assets/food");
+const recipeStorePath = path.join(__dirname, "recipes.json");
 fs.mkdirSync(uploadDirectory, { recursive: true });
 
 const uploadStorage = multer.diskStorage({
@@ -101,6 +104,15 @@ const recipes = [
 },
 ];
 
+if (fs.existsSync(recipeStorePath)) {
+  try {
+    const savedRecipes = JSON.parse(fs.readFileSync(recipeStorePath, "utf8"));
+    if (Array.isArray(savedRecipes)) recipes.push(...savedRecipes);
+  } catch (error) {
+    console.error("Could not load saved recipes:", error.message);
+  }
+}
+
 app.get("/api/recipes", (req, res) => {
   res.json(recipes);
 });
@@ -120,7 +132,7 @@ app.post("/api/recipes", upload.single("imageFile"), (req, res) => {
   }
 
   const newRecipe = {
-    id: Math.max(0, ...recipes.map(recipe => recipe.id)) + 1,
+    id: Math.max(0, ...recipes.map(recipe => Number(recipe.id) || 0)) + 1,
     name,
     ingredients,
     instructions,
@@ -128,6 +140,13 @@ app.post("/api/recipes", upload.single("imageFile"), (req, res) => {
   };
 
   recipes.push(newRecipe);
+  try {
+    const userRecipes = recipes.filter(recipe => recipe.id > 7);
+    fs.writeFileSync(recipeStorePath, JSON.stringify(userRecipes, null, 2));
+  } catch (error) {
+    recipes.pop();
+    return res.status(500).json({error: "The recipe could not be saved."});
+  }
   res.status(201).json(newRecipe);
 });
 
@@ -141,5 +160,4 @@ app.use((error, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Recipe API is running at http://localhost:${PORT}`);
 });
-
 

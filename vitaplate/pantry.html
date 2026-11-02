@@ -14,7 +14,7 @@
           <label class="field full">Name<input class="input" id="name" required placeholder="e.g. Red onions"></label>
           <label class="field">Category<select class="input" id="cat"></select></label>
           <label class="field">Expiry date<input class="input" id="exp" type="date"></label>
-          <label class="field">Amount<input class="input" id="qty" type="number" min="1" value="1"></label>
+          <label class="field">Amount<input class="input" id="qty" type="number" min="0.01" max="100000" step="any" value="1"></label>
           <label class="field">Unit<select class="input" id="unit"><option>pcs</option><option>g</option><option>kg</option><option>ml</option><option>l</option><option>cups</option></select></label>
           <button class="btn btn-primary full" type="submit">Add to pantry</button>
         </form>

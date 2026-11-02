@@ -52,11 +52,15 @@ function showStep(index){
   $("backButton").hidden=index===0;
   $("nextButton").textContent=index===steps.length-1?"Go to dashboard":"Continue";
 }
-function saveProfile(){
+async function saveProfile(){
   const answers=getAnswers();
   profiles[email]={...answers,completed:true};
   _s("vp_diet_profiles",profiles);
-  _s("vp_diets",answers.diet==="Vegetarian"?["Vegetarian"]:[]);
+  const diets=answers.diet==="Vegetarian"?["Vegetarian"]:[];
+  _s("vp_diets",diets);
+  // Save to the account on the server so it follows the user, not the browser.
+  try{await fetch("/api/dietary",{method:"PUT",headers:{"Content-Type":"application/json"},credentials:"same-origin",
+    body:JSON.stringify({diets,allergies:answers.allergies,onboarding_completed:true})})}catch{}
   location.href="index.html";
 }
 
