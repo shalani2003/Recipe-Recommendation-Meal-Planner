@@ -53,6 +53,27 @@
 								box-shadow: 0 0 0 4px rgba(47, 125, 58, 0.1);
 								}
 
+								.action-bar .quantity-input { flex: 0 0 100px; }
+								.action-bar .expiry-input { flex: 0 0 155px; }
+
+								.action-bar select {
+								border-radius: 12px;
+								padding: 12px 14px;
+								border: 1.5px solid transparent;
+								background: #f8fbf7;
+								font-size: 1rem;
+								color: #1d4638;
+								outline: none;
+								}
+
+								.action-bar select:focus {
+								background: #fff;
+								border-color: #2f7d3a;
+								box-shadow: 0 0 0 4px rgba(47, 125, 58, 0.1);
+								}
+
+								.action-bar .unit-select { flex: 0 0 105px; }
+
 								.btn-premium {
 								border-radius: 12px;
 								padding: 12px 24px;
@@ -164,6 +185,12 @@
 								letter-spacing: 0.5px;
 								}
 
+								.item-quantity {
+								color: #526457;
+								font-size: 0.85rem;
+								font-weight: 600;
+								}
+
 								.delete-btn {
 								width: 40px; height: 40px;
 								border-radius: 12px; border: none;
@@ -184,6 +211,7 @@
 								@media (max-width: 768px) {
 								.action-bar { flex-wrap: wrap; }
 								.action-bar input { width: 100%; flex: none; margin-bottom: 8px; }
+								.action-bar .quantity-input, .action-bar .unit-select, .action-bar .expiry-input { width: 100%; flex: none; }
 								.btn-premium { flex: 1; justify-content: center; padding: 12px 10px; }
 								.hero-premium { padding: 20px; min-height: 160px; }
 								.hero-premium h1 { font-size: 1.8rem; }
@@ -203,11 +231,21 @@
 				</section>
 
 				<!-- Action Bar -->
-				<div class="action-bar">
+				<form class="action-bar" id="manualShopForm" novalidate>
 					<datalist id="grocery-suggestions"></datalist>
-					<input id="nm" list="grocery-suggestions" placeholder="Type to search (e.g. Rice, Onion, Coconut...)" autocomplete="off">
+					<input id="nm" list="grocery-suggestions" placeholder="Item name" aria-label="Item name" autocomplete="off">
+					<input id="shopQuantity" class="quantity-input" type="number" inputmode="decimal" step="any" placeholder="Qty" aria-label="Quantity">
+					<select id="shopUnit" class="unit-select" aria-label="Unit">
+						<option value="pcs">pcs</option>
+						<option value="g">g</option>
+						<option value="kg">kg</option>
+						<option value="ml">ml</option>
+						<option value="l">l</option>
+						<option value="cups">cups</option>
+					</select>
+					<input id="pantryExpiry" class="expiry-input" type="date" aria-label="Pantry expiry date (optional)" title="Expiry date for Pantry items (optional)">
 
-						<button class="btn-premium btn-add" id="add" type="button">
+						<button class="btn-premium btn-add" id="add" type="submit">
 							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
 								<line x1="12" y1="5" x2="12" y2="19"></line>
 								<line x1="5" y1="12" x2="19" y2="12"></line>
@@ -224,8 +262,8 @@
 						</button>
 						<button class="btn-premium btn-move" id="build" type="button">Build from meal plan</button>
 						<button class="btn-premium btn-clear" id="clr" type="button" title="Clear List">🗑️</button>
-					</div>
-					<p id="shopStatus" class="muted" role="status" aria-live="polite"></p>
+				</form>
+				<p id="shopStatus" class="muted" role="status" aria-live="polite"></p>
 
 				<div id="list" class="shop-grid"></div>
 
@@ -233,6 +271,7 @@
 		</div>
 		<script src="js/data.js"></script>
 		<script src="js/app.js"></script>
+		<script src="js/shopping.js"></script>
 		<script>
 			document.addEventListener('DOMContentLoaded', () => {
 			const $ = id => document.getElementById(id);
@@ -256,7 +295,30 @@
 				_s("vp_shop_initialized", true);
 				_s("vp_shop", S);
 			}
+			const originalItemCount = S.length;
+			S = VPShopping.deduplicateShoppingItems(S);
+			if (S.length !== originalItemCount) _s("vp_shop", S);
 			const save = () => _s("vp_shop", S);
+			const mealPlanSignature = plan => Object.keys(plan || {}).sort().reduce((selection, day) => {
+				const meals = plan[day] || {};
+				Object.keys(meals).sort().forEach(meal => {
+					const id = meals[meal];
+					if (id !== "" && id !== null && id !== undefined && id !== 0) {
+						selection.push(`${day}:${meal}:${id}`);
+					}
+				});
+				return selection;
+			}, []).join("|");
+			const dismissedForPlan = plan => {
+				const signature = mealPlanSignature(plan);
+				const dismissed = _l("vp_shop_dismissed_plan", {signature: "", keys: []});
+				if (dismissed.signature !== signature) {
+					const next = {signature, keys: []};
+					_s("vp_shop_dismissed_plan", next);
+					return next;
+				}
+				return dismissed;
+			};
 
 			// 2. Sri Lankan Groceries List (50+ items)
 			const sriLankanGroceries = [
@@ -344,33 +406,15 @@
 				};
 
 				// 4. Category Mapping
-				
-function getCategory(name) {
-    const n = name.toLowerCase().trim();
-
-    if (/milk|cheese|yogurt|dairy|butter|cream|curd/.test(n)) {
-        return "Dairy";
-    }
-
-    if (/chicken|beef|pork|meat|fish|salmon|tuna|egg|prawn|maldive/.test(n)) {
-        return "Protein";
-    }
-
-    if (/dhal|lentil|gram|chickpea|cowpea|bean|rice|bread|flour|grain|quinoa|pasta|nut|seed|oats|kurakkan|sugar|salt/.test(n)) {
-        return "Pantry";
-    }
-
-    if (/tomato|avocado|onion|garlic|ginger|vegetable|broccoli|carrot|potato|salad|spinach|apple|banana|fruit|coconut|pumpkin|brinjal|gourd|okra|cabbage|gotukola|mukunuwenna|papaya|mango|pineapple|lime/.test(n)) {
-        return "Produce";
-    }
-
-    if (/chili|turmeric|curry|pepper|cinnamon|cardamom|cloves|oil|sauce|tea|coffee/.test(n)) {
-        return "Spices & Oils";
-    }
-
-    return "Other";
-}
-
+				function getCategory(name) {
+				const n = name.toLowerCase();
+				if (/chicken|beef|pork|meat|fish|salmon|tuna|egg|prawn|maldive|dhal|green gram|chickpeas|cowpea/.test(n)) return "Protein";
+				if (/milk|cheese|yogurt|dairy|butter|cream|curd/.test(n)) return "Dairy";
+				if (/tomato|avocado|onion|garlic|ginger|vegetable|broccoli|carrot|potato|salad|spinach|apple|banana|fruit|coconut|pumpkin|brinjal|gourd|okra|beans|cabbage|gotukola|mukunuwenna|papaya|mango|pineapple|lime/.test(n)) return "Produce";
+				if (/rice|bread|flour|grain|quinoa|pasta|nut|seed|oats|kurakkan|sugar|salt/.test(n)) return "Pantry";
+				if (/chili|turmeric|curry|pepper|cinnamon|cardamom|cloves|oil|sauce|tea|coffee/.test(n)) return "Spices & Oils";
+				return "Other";
+				}
 
 				// 5. Image Resolver with Bulletproof Fallback
 				function getImage(name) {
@@ -427,6 +471,7 @@ function getCategory(name) {
 
 					<div class="item-details">
 						<span class="item-name">${item.name}</span>
+						${VPShopping.formatQuantity(item) ? `<span class="item-quantity">${VPShopping.formatQuantity(item)}</span>` : ""}
 						<span class="item-badge">${getCategory(item.name)}</span>
 					</div>
 
@@ -443,120 +488,130 @@ function getCategory(name) {
 				save();
 				}
 
-				const sameShoppingItem = (left, right) => ingredientMatches(left, right) || normalizeIngredient(left) === normalizeIngredient(right);
-				const addShoppingItem = name => {
-					const existing = S.find(item => sameShoppingItem(item.name, name));
-					if (existing) return false;
-					S.push({id: Date.now().toString() + Math.random().toString(36).substr(0, 5), name, done: false});
-					return true;
-				};
-
-				const addManualItem = () => {
+				const addManualItem = event => {
+					event.preventDefault();
 					const input = $("nm");
-					const value = input.value.trim();
-					if (!value) {
-						status("Enter an item to add.");
+					const result = VPShopping.addManualShoppingItem(
+						S,
+						input.value,
+						$("shopQuantity").value,
+						$("shopUnit").value
+					);
+					if (result.error) {
+						status(result.error);
 						input.focus();
 						return;
 					}
-					if (!addShoppingItem(value)) {
-						status("That item is already on your list.");
-						input.select();
-						return;
-					}
-					input.value = "";
+
 					save();
 					draw();
-					status(`${value} added to your list.`);
+					$("manualShopForm").reset();
+					status(result.merged
+						? `${result.item.name} quantity updated on your list.`
+						: `${result.item.name} added to your list.`);
 				};
 
-				const plannedRecipes = plan => Object.values(plan)
-					.flatMap(day => Object.values(day || {}))
-					.filter(id => id !== "" && id !== null && id !== undefined)
-					.map(id => [...R, ..._l("vp_recipe_catalog", [])]
-						.find(recipe => String(recipe.id) === String(id)))
-					.filter(Boolean);
+				const sameGeneratedItems = (left, right) => left.length === right.length
+					&& left.every((item, index) =>
+						item.id === right[index].id
+						&& item.name === right[index].name
+						&& item.quantity === right[index].quantity
+						&& item.unit === right[index].unit
+						&& item.done === right[index].done
+					);
+
+				const syncMealPlanShoppingList = (announce = false) => {
+					let nextItems;
+					const plan = _l("vp_plan", {});
+					const hasPlannedMeals = Object.keys(plan).some(dayName => {
+						const day = plan[dayName];
+						return day && typeof day === "object" && Object.keys(day).some(meal => {
+							const id = day[meal];
+							return id !== "" && id !== null && id !== undefined && id !== 0;
+						});
+					});
+					try {
+						nextItems = VPShopping.buildFromMealPlan(
+							plan,
+							_l("vp_recipe_catalog", []),
+							S,
+							_l("vp_pantry", []),
+							dismissedForPlan(plan).keys
+						);
+					} catch (error) {
+						status(`Unable to update the shopping list: ${error.message}`);
+						return 0;
+					}
+
+					const generatedIds = nextItems.map(item => String(item.id));
+					const currentItems = S.filter(item =>
+						item.source === "meal-plan" || generatedIds.includes(String(item.id))
+					);
+					if (!sameGeneratedItems(currentItems, nextItems)) {
+						S = S.filter(item =>
+							item.source !== "meal-plan" && !generatedIds.includes(String(item.id))
+						).concat(nextItems);
+						save();
+						draw();
+					}
+
+					if (announce) {
+						status(nextItems.length
+							? `${nextItems.length} ingredient${nextItems.length === 1 ? "" : "s"} updated from your meal plan.`
+							: hasPlannedMeals
+								? "Your pantry already covers all meal plan ingredients."
+								: "Add meals to your meal plan before building a shopping list.");
+					}
+					return nextItems.length;
+				};
 
 				const buildFromMealPlan = () => {
-					const plan = _l("vp_plan", {});
-					const recipes = plannedRecipes(plan);
-					const missing = recipes
-						.flatMap(recipe => recipe.ing || [])
-						.filter(ingredient => !haveIng(ingredient));
-					const added = [...new Set(missing.map(normalizeIngredient))]
-						.map(normalized => missing.find(ingredient => normalizeIngredient(ingredient) === normalized))
-						.filter(Boolean)
-						.filter(addShoppingItem);
-					save();
-					draw();
-					if (!recipes.length) {
-						status("Add meals to your meal plan before building a shopping list.");
-					} else {
-						status(added.length
-							? `${added.length} missing ingredient${added.length === 1 ? "" : "s"} added.`
-							: "Your shopping list is already up to date.");
-					}
+					syncMealPlanShoppingList(true);
 				};
 
 				// 7. Event Listeners
-				$("add").addEventListener("click", addManualItem);
-				$("nm").addEventListener("keydown", event => {
-					if (event.key === "Enter") {
-						event.preventDefault();
-						addManualItem();
+				$("manualShopForm").addEventListener("submit", addManualItem);
+				$("build").addEventListener("click", buildFromMealPlan);
+				window.addEventListener("storage", event => {
+					if (event.key === "vp_plan" || event.key === "vp_pantry" || event.key === null) {
+						syncMealPlanShoppingList();
 					}
 				});
-				$("build").addEventListener("click", buildFromMealPlan);
+				window.addEventListener("focus", () => syncMealPlanShoppingList());
+				document.addEventListener("visibilitychange", () => {
+					if (!document.hidden) syncMealPlanShoppingList();
+				});
 
 				// Move to Pantry
-				$("mv").addEventListener("click", async () => {
+				$("mv").addEventListener("click", () => {
 				const boughtItems = S.filter(i => i.done);
 
 				if (boughtItems.length === 0) {
-				alert("Please check (✓) the items you have bought first!");
+				status("Mark items as bought before moving them to the Pantry.");
 				return;
 				}
 
-				const moved = [];
-				for (const item of boughtItems) {
-					const name = item.name.toLowerCase();
-					const category = /chicken|beef|pork|meat|fish|salmon|tuna|egg|prawn|dhal|green gram|chickpea/.test(name)
-						? "Protein"
-						: /milk|cheese|yogurt|dairy|butter|cream|curd/.test(name)
-							? "Dairy"
-							: /banana|papaya|mango|pineapple|lime|avocado|apple|coconut/.test(name)
-								? "Fruits"
-								: /chili|turmeric|curry|pepper|cinnamon|cardamom|clove|oil|sauce|tea|coffee/.test(name)
-									? "Spices & sauces"
-									: /rice|bread|flour|grain|quinoa|pasta|oat|kurakkan|sugar|salt/.test(name)
-										? "Grains"
-										: /tomato|onion|garlic|ginger|vegetable|broccoli|carrot|potato|spinach|brinjal|gourd|okra|bean|cabbage|gotukola|mukunuwenna/.test(name)
-											? "Vegetables"
-											: "Other";
-					try {
-						const response = await fetch("/api/pantry", {
-							method: "POST",
-							credentials: "same-origin",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({ name: item.name, category, quantity: 1, unit: "pcs" })
-						});
-						const result = await response.json().catch(() => ({}));
-						if (response.status === 401) {
-							location.replace("login.html");
-							return;
-						}
-						if (!response.ok) {
-							alert(result.error || `Could not move ${item.name} to the pantry.`);
-							break;
-						}
-						moved.push(item.id);
-					} catch {
-						alert("Cannot reach the server. Start the backend and try again.");
-						break;
-					}
+				const result = VPShopping.moveBoughtItemsToPantry(
+					S,
+					_l("vp_pantry", []),
+					$("pantryExpiry").value
+				);
+				if (result.error) {
+					status(`Unable to move items to the Pantry: ${result.error}`);
+					return;
 				}
-				S = S.filter(i => !moved.includes(i.id)); // Keep any items that failed to move.
-				draw();
+
+				try {
+					_s("vp_pantry", result.pantryItems);
+					const movedIds = result.movedIds;
+					const remaining = S.filter(item => movedIds.indexOf(String(item.id)) === -1);
+					_s("vp_shop", remaining);
+					S = remaining;
+					draw();
+					status(`${result.movedIds.length} bought item${result.movedIds.length === 1 ? "" : "s"} moved to the Pantry.`);
+				} catch (error) {
+					status(`Unable to save Pantry updates: ${error.message}. Your bought items remain on the shopping list.`);
+				}
 				});
 
 				// Clear List
@@ -573,21 +628,33 @@ function getCategory(name) {
 				const checkBtn = e.target.closest('[data-check]');
 				if (checkBtn) {
 				const itemId = checkBtn.getAttribute('data-check');
-				const item = S.find(i => String(i.id) === String(itemId));
-				if (item) { item.done = !item.done; draw(); }
+				const item = VPShopping.toggleBoughtItem(S, itemId);
+				if (item) {
+					draw();
+					status(`${item.name} ${item.done ? "marked as bought" : "marked as not bought"}.`);
+				}
 				return;
 				}
 
 				const deleteBtn = e.target.closest('[data-delete]');
 				if (deleteBtn) {
 				const itemId = deleteBtn.getAttribute('data-delete');
-				S = S.filter(i => String(i.id) !== String(itemId));
+				const removed = VPShopping.removeShoppingItem(S, itemId);
+				if (!removed) return;
+				if (removed.source === "meal-plan") {
+					const plan = _l("vp_plan", {});
+					const dismissed = dismissedForPlan(plan);
+					const key = VPShopping.ingredientKey(removed.name, removed.unit);
+					if (dismissed.keys.indexOf(key) === -1) dismissed.keys.push(key);
+					_s("vp_shop_dismissed_plan", dismissed);
+				}
 				draw();
-				status("Item removed from your list.");
+				status(`${removed.name} removed from your list.`);
 				}
 				});
 
 				// Initial render
+				syncMealPlanShoppingList();
 				draw();
 				});
 			</script>
