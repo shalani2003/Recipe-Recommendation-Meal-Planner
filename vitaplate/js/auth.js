@@ -1,0 +1,72 @@
+// Auth with Flask backend (SQLite). Talks to /api/* on the same server.
+const $=id=>document.getElementById(id);
+async function api(path,payload,method="POST"){
+ try{
+  const r=await fetch(path,{method,headers:{"Content-Type":"application/json"},credentials:"same-origin",body:method==="GET"?undefined:JSON.stringify(payload||{})});
+  const d=await r.json().catch(()=>({}));
+  return{ok:r.ok,status:r.status,data:d};
+ }catch{
+  return{ok:false,status:0,data:{error:"Cannot reach the server. Start the Flask backend and open http://127.0.0.1:5000/login.html"}};
+ }
+}
+function fieldErr(id,msg){const el=$(id);el.classList.toggle("bad",!!msg);$(id+"Err").textContent=msg||"";return !msg}
+function showAlert(m,ok){const a=$("alert");a.textContent=m;a.classList.add("show")}
+async function startSession(u,go=true){
+ const d=await api("/api/dietary",null,"GET");
+ if(!d.ok){showAlert(d.data.error||"Could not load your dietary preferences.");return false}
+ VP.user.name=u.name;
+ VP.diets=d.data.diets||[];
+ if(go)location.href=d.data.onboarding_completed?"index.html":"onboarding.html";
+ return true;
+}
+document.querySelectorAll("[data-pw]").forEach(b=>b.onclick=()=>{
+ const i=$(b.dataset.pw),s=i.type==="password",label=(b.getAttribute("aria-label")||"Show password").replace(/^(Show|Hide) /,"");
+ i.type=s?"text":"password";
+ b.textContent=s?"Hide":"Show";
+ b.setAttribute("aria-pressed",String(s));
+ b.setAttribute("aria-label",`${s?"Hide":"Show"} ${label}`);
+});
+const emailOk=e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+const slideshow=document.querySelector(".auth-slideshow");
+if(slideshow){const slides=slideshow.querySelectorAll("img");let current=0;
+ setInterval(()=>{slides[current].classList.remove("active");current=(current+1)%slides.length;slides[current].classList.add("active")},4000)}
+
+// The server session cookie is the source of truth.
+api("/api/me",null,"GET").then(r=>{if(r.ok&&r.data.user)startSession(r.data.user)});
+
+if($("loginForm"))$("loginForm").onsubmit=async e=>{e.preventDefault();$("alert").classList.remove("show");
+ const em=$("email").value.trim().toLowerCase(),pw=$("pw").value;
+ const a=fieldErr("email",emailOk(em)?"":"Enter a valid email"),b=fieldErr("pw",pw?"":"Enter your password");if(!(a&&b))return;
+ const r=await api("/api/login",{email:em,password:pw});
+ if(!r.ok)return showAlert(r.data.error||"Login failed. Please try again.");
+ await startSession(r.data.user)};
+if($("loginForm")&&new URLSearchParams(location.search).has("registered"))showAlert("Account created. Log in to continue.");
+
+if($("regForm"))$("regForm").onsubmit=async e=>{e.preventDefault();$("alert").classList.remove("show");
+ const n=$("name").value.trim(),em=$("email").value.trim().toLowerCase(),pw=$("pw").value,c=$("pw2").value;
+ const ok=[fieldErr("name",n.length>=2?"":"Enter your name"),fieldErr("email",emailOk(em)?"":"Enter a valid email"),
+  fieldErr("pw",pw.length>=8&&/\d/.test(pw)?"":"Use 8+ characters with at least one number"),fieldErr("pw2",c===pw?"":"Passwords do not match")];
+ if(!$("terms").checked){showAlert("Please accept the terms to continue.");return}
+ if(ok.includes(false))return;
+ const r=await api("/api/register",{name:n,email:em,password:pw});
+ if(!r.ok)return showAlert(r.data.error||"Registration failed. Please try again.");
+ // The recovery code is shown once. It is needed to reset a forgotten password.
+ window.prompt("Your recovery code (copy it and keep it safe). You need it to reset your password:",r.data.recovery_code);
+ const logout=await api("/api/logout",{});
+ if(!logout.ok)return showAlert(logout.data.error||"Could not log out after registration.");
+ location.href="login.html?registered=1"};
+
+if($("resetForm"))$("resetForm").onsubmit=async e=>{e.preventDefault();$("alert").classList.remove("show");
+ const em=$("email").value.trim().toLowerCase(),code=$("code").value.trim(),pw=$("pw").value,c=$("pw2").value;
+ const ok=[fieldErr("email",emailOk(em)?"":"Enter a valid email"),fieldErr("code",code?"":"Enter your recovery code"),
+  fieldErr("pw",pw.length>=8&&/\d/.test(pw)?"":"Use 8+ characters with at least one number"),
+  fieldErr("pw2",c===pw?"":"Passwords do not match")];
+ if(ok.includes(false))return;
+ const step1=await api("/api/forgot-password",{email:em,recovery_code:code});
+ if(!step1.ok)return showAlert(step1.data.error||"Could not verify your details.");
+ const r=await api("/api/reset-password",{token:step1.data.reset_token,password:pw});
+ if(!r.ok)return showAlert(r.data.error||"Could not reset the password.");
+ window.prompt("Password changed. This is your NEW recovery code (copy it; the old one no longer works):",r.data.recovery_code);
+ showAlert("Your password has been reset. You can now log in.");
+ $("resetForm").reset();
+ setTimeout(()=>location.href="login.html",1200)};
