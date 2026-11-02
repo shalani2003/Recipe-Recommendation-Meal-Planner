@@ -19,7 +19,13 @@ async function startSession(u,go=true){
  if(go)location.href=d.data.onboarding_completed?"index.html":"onboarding.html";
  return true;
 }
-document.querySelectorAll("[data-pw]").forEach(b=>b.onclick=()=>{const i=$(b.dataset.pw),s=i.type==="password";i.type=s?"text":"password";b.textContent=s?"Hide":"Show"});
+document.querySelectorAll("[data-pw]").forEach(b=>b.onclick=()=>{
+ const i=$(b.dataset.pw),s=i.type==="password",label=(b.getAttribute("aria-label")||"Show password").replace(/^(Show|Hide) /,"");
+ i.type=s?"text":"password";
+ b.textContent=s?"Hide":"Show";
+ b.setAttribute("aria-pressed",String(s));
+ b.setAttribute("aria-label",`${s?"Hide":"Show"} ${label}`);
+});
 const emailOk=e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 const slideshow=document.querySelector(".auth-slideshow");
 if(slideshow){const slides=slideshow.querySelectorAll("img");let current=0;

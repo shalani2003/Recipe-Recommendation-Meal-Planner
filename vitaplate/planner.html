@@ -143,6 +143,8 @@
 
         </section>
 
+        <p id="dietEmpty" class="muted" role="status" hidden></p>
+
         <!-- Days and Meal Selection -->
         <div class="days" id="days"></div>
 
@@ -237,6 +239,10 @@
     // Draw the weekly meal planner
     function draw() {
         const p = get();
+        const allowed = recipes().filter(dietOk);
+        $("dietEmpty").textContent = "No recipes match your diet filters. Update your diet in Profile or Settings.";
+        $("dietEmpty").hidden = allowed.length > 0;
+        $("auto").disabled = allowed.length === 0;
 
         let T = {
             kcal: 0,
@@ -267,7 +273,7 @@
                         <select data-d="${d}" data-m="${m}">
                             <option value="">Choose…</option>
 
-                            ${recipes().filter(dietOk).map(x => `
+                            ${allowed.map(x => `
                                 <option value="${x.id}"
                                     ${x.id == id ? "selected" : ""}>
                                     ${x.name}

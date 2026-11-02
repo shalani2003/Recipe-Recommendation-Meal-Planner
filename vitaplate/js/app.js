@@ -49,9 +49,10 @@ function buildShell(){
   const pinned=_l("vp_nav_pinned",false);
   const updatePin=()=>{document.body.classList.toggle("nav-pinned",pinnedState);pinBtn.setAttribute("aria-pressed",pinnedState);pinBtn.textContent=pinnedState?"📌 Pinned":"📌 Pin"};
   let pinnedState=pinned;
-  const toggle=()=>{if(!pinnedState)document.body.classList.toggle("nav-open")};
+  const isMobile=()=>window.matchMedia("(max-width: 820px)").matches;
+  const toggle=()=>{if(!pinnedState||isMobile())document.body.classList.toggle("nav-open")};
   document.getElementById("menuBtn").onclick=toggle;
-  pinBtn.onclick=()=>{pinnedState=!pinnedState;_s("vp_nav_pinned",pinnedState);if(pinnedState)document.body.classList.add("nav-open");updatePin()};
+  pinBtn.onclick=()=>{pinnedState=!pinnedState;_s("vp_nav_pinned",pinnedState);if(pinnedState&&!isMobile())document.body.classList.add("nav-open");else if(isMobile())document.body.classList.remove("nav-open");updatePin()};
   document.getElementById("scrim").onclick=toggle;
   document.getElementById("logout").onclick=async()=>{
     try{
