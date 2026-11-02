@@ -1,4 +1,4 @@
-// Mock data + shared helpers (no real API - per project charter)
+// Shared sample catalog and helpers; account state is hydrated from the API.
 const _l=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch{return d}};
 const _s=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 const AGE_LIMITS={min:1,max:120};
@@ -39,7 +39,9 @@ const resetUserData=()=>{
   if(account)_s("vp_user",{name:account.name});
 };
 window.VP={
-  user:{name:"Shalani",goalKcal:1800,macros:{protein:[62,90],carbs:[140,210],fat:[38,60]},..._l("vp_user",{})},
+  user:{name:"Friend",goalKcal:1800,profilePicture:"",macros:{protein:[62,90],carbs:[140,210],fat:[38,60]}},
+  pantry:[],
+  diets:[],
   today:[{meal:"Breakfast",name:"Coconut roti & pol sambol",emoji:"🥥",kcal:420},{meal:"Lunch",name:"Rice, dhal & gotukola sallad",emoji:"🍛",kcal:610},{meal:"Snack",name:"Banana & peanuts",emoji:"🍌",kcal:180}],
   picks:[{name:"Chicken & broccoli bowl",emoji:"🥦",match:92,kcal:480},{name:"Pumpkin curry",emoji:"🎃",match:85,kcal:390},{name:"Egg fried rice",emoji:"🍳",match:78,kcal:520}]
 };
@@ -74,14 +76,17 @@ const ingredientMatches=(pantryIngredient,recipeIngredient)=>{
   if(!pantry||!recipe)return false;
   return pantry===recipe;
 };
-const haveIng=ing=>_l("vp_pantry",[]).some(item=>ingredientMatches(item?.name,ing));
-const matchPct=r=>Math.round(r.ing.filter(haveIng).length/r.ing.length*100);
+const haveIng=ing=>VP.pantry.some(item=>ingredientMatches(item?.name,ing));
+const matchPct=r=>{
+  const ingredients=r.ing||r.ingredients||[];
+  return ingredients.length?Math.round(ingredients.filter(haveIng).length/ingredients.length*100):0;
+};
 function savedFoodRestrictions(){
-  const profile=_l("vp_profile",{}), session=_l("vp_session",null), profiles=_l("vp_diet_profiles",{});
-  const onboarding=session?.email?profiles[session.email]:null;
   const allergies=[];
   const add=value=>String(value||"").split(",").map(item=>item.trim()).filter(item=>item&&item.toLowerCase()!=="none").forEach(item=>allergies.push(item));
-  add(profile.allergies); add(profile.infections); (onboarding?.allergies||[]).forEach(add); (onboarding?.conditions||[]).forEach(add);
+  const profile=VP.profile||{};
+  const dietary=VP.dietary||{};
+  add(profile.allergies); add(profile.health_notes); (dietary.allergies||[]).forEach(add);
   return [...new Set(allergies.map(item=>item.toLowerCase()))];
 }
 const allergyIngredients={
@@ -122,7 +127,7 @@ function inferredDietOk(recipe,diet){
   if(diet==="Low sugar")return !has(["sugar","honey"]);
   return true;
 }
-const dietOk=r=>_l("vp_diets",[]).every(d=>inferredDietOk(r,d))&&!recipeHasConflict(r);
+const dietOk=r=>(VP.diets||[]).every(d=>inferredDietOk(r,d))&&!recipeHasConflict(r);
 // Cartoon food characters (inline SVG)
 function char(kind,size=90){
   const B={

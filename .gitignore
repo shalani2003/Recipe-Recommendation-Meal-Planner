@@ -1,1 +1,8 @@
 backend/node_modules/
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.pytest_cache/
+backend/vitaplate.db
+backend/secret.key
+backend/uploads/

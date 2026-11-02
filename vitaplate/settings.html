@@ -236,7 +236,7 @@
 
                 <section class="card">
                     <h2>Save changes</h2>
-                    <p class="muted" style="margin-top:6px">Your settings are saved in this browser.</p>
+                    <p class="muted" style="margin-top:6px">Your settings are saved to your account.</p>
                     <p class="settings-error" id="error" role="alert"></p>
                     <div class="settings-actions">
                         <button class="btn btn-primary" id="save">Save settings</button>
@@ -252,25 +252,10 @@
     <script>
         const $ = id => document.getElementById(id);
         const emailOk = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        let hasPicture = false;
         const MAX_PROFILE_PICTURE_BYTES = 256 * 1024;
         const MAX_PROFILE_PICTURE_INPUT_BYTES = 20 * 1024 * 1024;
         const PROFILE_PICTURE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-        let profilePicture = "";
-
-        const showProfilePicture = picture => {
-            const avatar = $("settingsAvatar");
-            if (picture) {
-                avatar.replaceChildren(Object.assign(document.createElement("img"), {
-                    src: picture,
-                    alt: "Current profile picture"
-                }));
-                $("profilePictureStatus").textContent = "Picture selected";
-            } else {
-                avatar.textContent = "👤";
-                $("profilePictureStatus").textContent = "No picture selected";
-            }
-        };
-
         const compressProfilePicture = file => new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onerror = () => reject(new Error("The profile picture could not be read."));
@@ -291,7 +276,7 @@
                         result = canvas.toDataURL("image/jpeg", quality);
                     }
                     if (result.length > MAX_PROFILE_PICTURE_BYTES * 1.37) {
-                        reject(new Error("The image could not be compressed enough for browser storage."));
+                        reject(new Error("The image could not be compressed enough for upload."));
                         return;
                     }
                     resolve(result);
@@ -301,148 +286,129 @@
             reader.readAsDataURL(file);
         });
 
+
+        // Talks to the backend. A 401 means the login ended, so go back to the login page.
+        const call = async (path, options = {}) => {
+            try {
+                const r = await fetch(path, { credentials: "same-origin", ...options });
+                const data = await r.json().catch(() => ({}));
+                if (r.status === 401) location.replace("login.html");
+                return { ok: r.ok, data };
+            } catch {
+                return { ok: false, data: { error: "Cannot reach the server. Start the backend and try again." } };
+            }
+        };
+        const send = (method, payload) => ({ method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+
+        const showProfilePicture = url => {
+            const avatar = $("settingsAvatar");
+            hasPicture = !!url;
+            if (url) {
+                avatar.replaceChildren(Object.assign(document.createElement("img"), { src: url, alt: "Current profile picture" }));
+                $("profilePictureStatus").textContent = "Picture saved";
+            } else {
+                avatar.textContent = "👤";
+                $("profilePictureStatus").textContent = "No picture selected";
+            }
+        };
+
+        // One place for the name and picture that the rest of the app reads.
+        const refreshShell = (name, picture) => {
+            if (window.VP && VP.user) {
+                if (name !== undefined) VP.user.name = name;
+                if (picture !== undefined) VP.user.profilePicture = picture;
+            }
+            if (typeof updateShellAvatar === "function") updateShellAvatar();
+            if (name !== undefined && typeof updateShellName === "function") updateShellName(name);
+        };
+        const remember = s => {
+            if (window.VP && VP.user) {
+                VP.user.name = s.name;
+                VP.user.profilePicture = s.picture_url || "";
+            }
+        };
+
+        const fill = s => {
+            $("name").value = s.name;
+            $("email").value = s.email;
+            $("notificationMode").value = s.preferences.notificationMode;
+            $("mealReminders").checked = s.preferences.mealReminders;
+            $("weeklySummary").checked = s.preferences.weeklySummary;
+            showProfilePicture(s.picture_url);
+            remember(s);
+            refreshShell(s.name, s.picture_url || "");
+            $("save").disabled = false;
+        };
+
+        $("save").disabled = true;
+        call("/api/settings").then(r => {
+            if (r.ok) fill(r.data);
+            else $("error").textContent = r.data.error || "Could not load your settings.";
+        });
+
         $("profilePicture").onchange = async event => {
             const file = event.target.files[0];
+            event.target.value = "";
             if (!file) return;
-            if (!PROFILE_PICTURE_TYPES.has(file.type)) {
-                $("error").textContent = "Choose a JPG, PNG, or WebP image.";
-                event.target.value = "";
-                return;
-            }
-            if (file.size > MAX_PROFILE_PICTURE_INPUT_BYTES) {
-                $("error").textContent = "Choose an image smaller than 20 MB.";
-                event.target.value = "";
-                return;
-            }
-
+            $("error").textContent = "";
+            if (!PROFILE_PICTURE_TYPES.has(file.type)) { $("error").textContent = "Choose a JPG, PNG, or WebP image."; return; }
+            if (file.size > MAX_PROFILE_PICTURE_INPUT_BYTES) { $("error").textContent = "Choose an image smaller than 20 MB."; return; }
+            const form = new FormData();
             try {
-                profilePicture = await compressProfilePicture(file);
-                showProfilePicture(profilePicture);
-                $("error").textContent = "";
+                // Shrink the photo in the browser first, then upload the small JPEG.
+                const dataUrl = await compressProfilePicture(file);
+                const bytes = atob(dataUrl.split(",")[1]);   // not fetch(): the page security policy blocks data: URLs there
+                const small = new Blob([Uint8Array.from(bytes, ch => ch.charCodeAt(0))], { type: "image/jpeg" });
+                form.append("picture", small, "profile.jpg");
             } catch (error) {
-                profilePicture = "";
-                showProfilePicture(profilePicture);
                 $("error").textContent = error.message || "The profile picture could not be processed.";
-                event.target.value = "";
+                return;
             }
+            const r = await call("/api/settings/picture", { method: "POST", body: form });
+            if (!r.ok) { $("error").textContent = r.data.error || "The picture could not be saved."; return; }
+            showProfilePicture(r.data.picture_url);
+            refreshShell(undefined, r.data.picture_url);
+            $("saved").textContent = "Profile picture saved";
         };
 
-        $("resetProfilePicture").onclick = () => {
-            if (!profilePicture || !window.confirm("Delete your current profile picture?")) return;
-
-            try {
-                profilePicture = "";
-                const user = { ..._l("vp_user", {}), profilePicture: "" };
-                _s("vp_user", user);
-                if (accountRecord) {
-                    accountRecord.profilePicture = "";
-                    _s("vp_users", accountList);
-                }
-                VP.user.profilePicture = "";
-                updateShellAvatar();
-                $("profilePicture").value = "";
-                showProfilePicture(profilePicture);
-                $("saved").textContent = "Profile picture deleted";
-                $("error").textContent = "";
-            } catch {
-                $("error").textContent = "The profile picture could not be deleted. Try again.";
-            }
+        $("resetProfilePicture").onclick = async () => {
+            if (!hasPicture || !window.confirm("Delete your current profile picture?")) return;
+            const r = await call("/api/settings/picture", { method: "DELETE" });
+            if (!r.ok) { $("error").textContent = r.data.error || "The picture could not be deleted."; return; }
+            showProfilePicture("");
+            refreshShell(undefined, "");
+            $("saved").textContent = "Profile picture deleted";
         };
-
-        const hash = async value => {
-            const bytes = await crypto.subtle.digest(
-                "SHA-256",
-                new TextEncoder().encode(value)
-            );
-            return [...new Uint8Array(bytes)]
-                .map(byte => byte.toString(16).padStart(2, "0"))
-                .join("");
-        };
-
-        const session = _l("vp_session", null);
-        const accountList = _l("vp_users", []);
-        const accountRecord = session && accountList.find(user => user.email === session.email);
-        const storedUser = _l("vp_user", {});
-        const account = accountRecord || (session ? {email: session.email, name: storedUser.name || "Friend", profilePicture: storedUser.profilePicture || ""} : null);
-        const preferences = {
-            notificationMode: "all",
-            mealReminders: true,
-            weeklySummary: true,
-            ..._l("vp_settings", {})
-        };
-
-        if (!account) {
-            location.replace("login.html");
-        } else {
-            profilePicture = storedUser.profilePicture || account.profilePicture || "";
-            showProfilePicture(profilePicture);
-            $("name").value = account.name;
-            $("email").value = session.email;
-            $("notificationMode").value = preferences.notificationMode;
-            $("mealReminders").checked = preferences.mealReminders;
-            $("weeklySummary").checked = preferences.weeklySummary;
-        }
 
         $("save").onclick = async () => {
             $("error").textContent = "";
             $("saved").textContent = "";
-
             const name = $("name").value.trim();
             const email = $("email").value.trim().toLowerCase();
             const currentPassword = $("currentPassword").value;
             const newPassword = $("newPassword").value;
 
-            if (!name || name.length < 2) {
-                $("error").textContent = "Enter a name with at least 2 characters.";
-                return;
-            }
-            if (!emailOk(email)) {
-                $("error").textContent = "Enter a valid email address.";
-                return;
-            }
-            if (accountList.some(user => user.email === email && user !== accountRecord)) {
-                $("error").textContent = "That email is already in use.";
-                return;
-            }
-            if (newPassword && !accountRecord) {
-                $("error").textContent = "Password changes are unavailable until your account record is loaded.";
-                return;
-            }
+            if (name.length < 2) { $("error").textContent = "Enter a name with at least 2 characters."; return; }
+            if (!emailOk(email)) { $("error").textContent = "Enter a valid email address."; return; }
             if (newPassword && (!currentPassword || newPassword.length < 8 || !/\d/.test(newPassword))) {
                 $("error").textContent = "Use your current password and a new password with 8+ characters and one number.";
                 return;
             }
-            if (newPassword && accountRecord.hash !== await hash(currentPassword)) {
-                $("error").textContent = "Current password is incorrect.";
-                return;
+            const r = await call("/api/settings", send("PUT", {
+                name, email,
+                preferences: {
+                    notificationMode: $("notificationMode").value,
+                    mealReminders: $("mealReminders").checked,
+                    weeklySummary: $("weeklySummary").checked
+                }
+            }));
+            if (!r.ok) { $("error").textContent = r.data.error || "Your settings could not be saved."; return; }
+            fill(r.data);
+
+            if (newPassword) {
+                const p = await call("/api/settings/password", send("POST", { current_password: currentPassword, new_password: newPassword }));
+                if (!p.ok) { $("error").textContent = p.data.error || "The password could not be changed."; return; }
             }
-
-            const user = { ..._l("vp_user", {}), name, profilePicture };
-            const nextPreferences = {
-                notificationMode: $("notificationMode").value,
-                mealReminders: $("mealReminders").checked,
-                weeklySummary: $("weeklySummary").checked
-            };
-            const newHash = newPassword ? await hash(newPassword) : "";
-            const nextAccounts = accountRecord ? accountList.map(item => item === accountRecord
-                ? {...item, name, email, profilePicture, ...(newHash ? {hash: newHash} : {})}
-                : item) : accountList;
-
-            try {
-                saveUserName(name);
-                _s("vp_user", user);
-                _s("vp_session", { email });
-                if (accountRecord) _s("vp_users", nextAccounts);
-                _s("vp_settings", nextPreferences);
-                VP.user.name = name;
-                VP.user.profilePicture = profilePicture;
-                updateShellName(name);
-                updateShellAvatar();
-            } catch {
-                $("error").textContent = "Settings could not be saved. The image may be too large.";
-                return;
-            }
-
             $("currentPassword").value = "";
             $("newPassword").value = "";
             $("saved").textContent = "Saved";

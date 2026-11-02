@@ -1,3 +1,5 @@
+// RETIRED (task P2): recipes now run inside the Flask app (backend/routes/recipes_legacy.py, later routes/recipes.py).
+// Do not start this file. It is kept only for reference and can be deleted once routes/recipes.py exists.
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
