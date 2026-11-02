@@ -15,13 +15,13 @@ BAD_TEXT_RE = re.compile(r"[<>\x00-\x1f]")
 
 
 def error(message, status=400):
-    """Every error in the API has this shape: {"error": "message"}.
-    "message" and "success": false are also sent because recipes.html reads them."""
-    return jsonify({"success": False, "message": message, "error": message}), status
+    """Return the standard API error shape: {"error": "message"}."""
+    return jsonify({"error": message}), status
 
 
 def body():
-    return request.get_json(silent=True) or {}
+    data = request.get_json(silent=True)
+    return {} if data is None else data
 
 
 def clean_email(value):

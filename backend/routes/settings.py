@@ -19,17 +19,23 @@ MAX_PICTURE_BYTES = 2 * 1024 * 1024
 
 
 def read_prefs(db, user_id):
-    row = db.execute("SELECT prefs FROM user_settings WHERE user_id = ?", (user_id,)).fetchone()
+    row = db.execute("SELECT preferences FROM settings WHERE user_id = ?", (user_id,)).fetchone()
     prefs = dict(DEFAULT_PREFS)
-    if row:
-        prefs.update(json.loads(row["prefs"]))
+    legacy = db.execute("SELECT prefs FROM user_settings WHERE user_id = ?", (user_id,)).fetchone()
+    if legacy and legacy["prefs"]:
+        prefs.update(json.loads(legacy["prefs"]))
+    if row and row["preferences"]:
+        prefs.update(json.loads(row["preferences"]))
     return prefs
 
 
 def settings_json(db, user_id):
     u = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    setting = db.execute(
+        "SELECT profile_picture FROM settings WHERE user_id = ?", (user_id,)).fetchone()
+    picture = setting["profile_picture"] if setting and setting["profile_picture"] else u["picture"]
     return {"name": u["name"], "email": u["email"], "preferences": read_prefs(db, user_id),
-            "picture_url": ("/api/settings/picture?v=" + u["picture"]) if u["picture"] else None,
+            "picture_url": ("/api/settings/picture?v=" + picture) if picture else None,
             "has_recovery_code": bool(u["recovery_hash"])}
 
 
@@ -43,6 +49,8 @@ def get_settings():
 @login_required
 def put_settings():
     data = body()
+    if not isinstance(data, dict):
+        return error("Settings must be a JSON object")
     db = get_db()
     user = db.execute("SELECT * FROM users WHERE id = ?", (g.user_id,)).fetchone()
     name, email = user["name"], user["email"]
@@ -74,6 +82,10 @@ def put_settings():
                 prefs[key] = incoming[key]
 
     db.execute("UPDATE users SET name = ?, email = ? WHERE id = ?", (name, email, g.user_id))
+    db.execute("UPDATE profiles SET name = ? WHERE user_id = ?", (name, g.user_id))
+    db.execute("INSERT INTO settings (user_id, preferences) VALUES (?, ?) "
+               "ON CONFLICT(user_id) DO UPDATE SET preferences = excluded.preferences",
+               (g.user_id, json.dumps(prefs)))
     db.execute("INSERT INTO user_settings (user_id, prefs) VALUES (?, ?) "
                "ON CONFLICT(user_id) DO UPDATE SET prefs = excluded.prefs", (g.user_id, json.dumps(prefs)))
     db.commit()
@@ -84,13 +96,18 @@ def put_settings():
 @login_required
 def change_password():
     data = body()
+    if not isinstance(data, dict):
+        return error("Password details must be a JSON object")
     db = get_db()
     user = db.execute("SELECT * FROM users WHERE id = ?", (g.user_id,)).fetchone()
     if rate_limited("chpw:%s" % g.user_id, limit=8, window=300):
         return error("Too many attempts. Wait a few minutes and try again.", 429)
-    if not check_password_hash(user["password_hash"], str(data.get("current_password") or "")):
+    current_password = data.get("current_password")
+    new_pw = data.get("new_password")
+    if not isinstance(current_password, str) or not isinstance(new_pw, str):
+        return error("Enter your current and new password")
+    if not check_password_hash(user["password_hash"], current_password):
         return error("Your current password is incorrect.", 403)
-    new_pw = str(data.get("new_password") or "")
     problem = password_problem(new_pw)
     if problem:
         return error(problem)
@@ -105,9 +122,13 @@ def change_password():
 @login_required
 def new_code():
     """Make a new recovery code (needed for accounts made before recovery codes existed)."""
+    data = body()
+    if not isinstance(data, dict):
+        return error("Password details must be a JSON object")
     db = get_db()
     user = db.execute("SELECT * FROM users WHERE id = ?", (g.user_id,)).fetchone()
-    if not check_password_hash(user["password_hash"], str(body().get("password") or "")):
+    password = data.get("password")
+    if not isinstance(password, str) or not check_password_hash(user["password_hash"], password):
         return error("Your password is incorrect.", 403)
     code = new_recovery_code()
     db.execute("UPDATE users SET recovery_hash = ? WHERE id = ?", (generate_password_hash(norm_code(code)), g.user_id))
@@ -160,6 +181,9 @@ def upload_picture():
     with open(os.path.join(avatar_dir(), filename), "wb") as out:
         out.write(data)
     db.execute("UPDATE users SET picture = ? WHERE id = ?", (filename, g.user_id))
+    db.execute("INSERT INTO settings (user_id, profile_picture) VALUES (?, ?) "
+               "ON CONFLICT(user_id) DO UPDATE SET profile_picture = excluded.profile_picture",
+               (g.user_id, filename))
     db.commit()
     remove_picture_file(old)
     return jsonify({"picture_url": "/api/settings/picture?v=" + filename}), 201
@@ -168,10 +192,14 @@ def upload_picture():
 @bp.get("/settings/picture")
 @login_required
 def get_picture():
-    row = get_db().execute("SELECT picture FROM users WHERE id = ?", (g.user_id,)).fetchone()
-    if not row["picture"]:
+    db = get_db()
+    row = db.execute("SELECT profile_picture FROM settings WHERE user_id = ?", (g.user_id,)).fetchone()
+    picture = row["profile_picture"] if row and row["profile_picture"] else None
+    if picture is None:
+        picture = db.execute("SELECT picture FROM users WHERE id = ?", (g.user_id,)).fetchone()["picture"]
+    if not picture:
         return error("No picture", 404)
-    return send_from_directory(avatar_dir(), row["picture"])
+    return send_from_directory(avatar_dir(), picture)
 
 
 @bp.delete("/settings/picture")
@@ -181,6 +209,8 @@ def delete_picture():
     row = db.execute("SELECT picture FROM users WHERE id = ?", (g.user_id,)).fetchone()
     remove_picture_file(row["picture"])
     db.execute("UPDATE users SET picture = NULL WHERE id = ?", (g.user_id,))
+    db.execute("INSERT INTO settings (user_id, profile_picture) VALUES (?, NULL) "
+               "ON CONFLICT(user_id) DO UPDATE SET profile_picture = NULL", (g.user_id,))
     db.commit()
     return jsonify({"ok": True})
 
@@ -191,7 +221,10 @@ def delete_picture():
 def reset_account_data():
     """Delete this user's data only (pantry, diets, plan, shopping, health, settings, picture).
     The account and login are kept, and the answer says so."""
-    if body().get("confirm") is not True:
+    data = body()
+    if not isinstance(data, dict):
+        return error("Confirmation must be a JSON object")
+    if data.get("confirm") is not True:
         return error('Send {"confirm": true} to reset all data')
     db = get_db()
     row = db.execute("SELECT picture FROM users WHERE id = ?", (g.user_id,)).fetchone()

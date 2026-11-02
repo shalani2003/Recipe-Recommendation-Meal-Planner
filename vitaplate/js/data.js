@@ -2,7 +2,9 @@
 const _l=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch{return d}};
 const _s=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 window.VP={
-  user:{name:"Shalani",goalKcal:1800,macros:{protein:[62,90],carbs:[140,210],fat:[38,60]},..._l("vp_user",{})},
+  user:{name:"Friend",goalKcal:1800,profilePicture:"",macros:{protein:[62,90],carbs:[140,210],fat:[38,60]}},
+  pantry:[],
+  diets:[],
   today:[{meal:"Breakfast",name:"Coconut roti & pol sambol",emoji:"🥥",kcal:420},{meal:"Lunch",name:"Rice, dhal & gotukola sallad",emoji:"🍛",kcal:610},{meal:"Snack",name:"Banana & peanuts",emoji:"🍌",kcal:180}],
   picks:[{name:"Chicken & broccoli bowl",emoji:"🥦",match:92,kcal:480},{name:"Pumpkin curry",emoji:"🎃",match:85,kcal:390},{name:"Egg fried rice",emoji:"🍳",match:78,kcal:520}]
 };
@@ -18,9 +20,9 @@ const R=[
  {id:8,name:"Creamy chicken curry",kind:"bowl",time:40,kcal:560,p:42,c:22,f:32,diets:[GF,H],ing:["Chicken","Coconut","Onion","Curry powder"]}
 ];
 const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],MEALS=["Breakfast","Lunch","Dinner"];
-const haveIng=ing=>_l("vp_pantry",[]).some(i=>{const a=i.name.toLowerCase(),b=ing.toLowerCase();return a.includes(b)||b.includes(a)});
+const haveIng=ing=>VP.pantry.some(i=>{const a=i.name.toLowerCase(),b=ing.toLowerCase();return a.includes(b)||b.includes(a)});
 const matchPct=r=>Math.round(r.ing.filter(haveIng).length/r.ing.length*100);
-const dietOk=r=>_l("vp_diets",[]).every(d=>r.diets.includes(d));
+const dietOk=r=>VP.diets.every(d=>r.diets.includes(d));
 // Cartoon food characters (inline SVG)
 function char(kind,size=90){
   const B={

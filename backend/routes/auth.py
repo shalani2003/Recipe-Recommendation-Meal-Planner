@@ -41,6 +41,8 @@ def serializer():
 @bp.post("/register")
 def register():
     data = body()
+    if not isinstance(data, dict):
+        return error("Registration details must be a JSON object")
     name, problem = clean_text(data.get("name"), "your name", 2, 60)
     if problem:
         return error(problem)
@@ -72,6 +74,8 @@ def register():
 @bp.post("/login")
 def login():
     data = body()
+    if not isinstance(data, dict):
+        return error("Login details must be a JSON object")
     email = clean_email(data.get("email"))
     pw = str(data.get("password") or "")
     if not EMAIL_RE.match(email):
@@ -110,6 +114,8 @@ def forgot_password():
     to find out which emails are registered.
     """
     data = body()
+    if not isinstance(data, dict):
+        return error("Recovery details must be a JSON object")
     email = clean_email(data.get("email"))
     code = norm_code(data.get("recovery_code"))
     generic = error("Email or recovery code is incorrect.", 400)
@@ -130,6 +136,8 @@ def forgot_password():
 def reset_password():
     """Step 2: set the new password with the token from /api/forgot-password."""
     data = body()
+    if not isinstance(data, dict):
+        return error("Password reset details must be a JSON object")
     pw = str(data.get("password") or "")
     problem = password_problem(pw)
     if problem:

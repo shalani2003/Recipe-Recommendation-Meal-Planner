@@ -82,7 +82,7 @@
             <section class="hero profile-hero">
                 <div>
                     <h1>Your profile</h1>
-                    <p>Set your name, daily calorie goal and diet. Everything stays in your browser.</p>
+                    <p>Update your profile and dietary preferences saved to your account.</p>
                 </div>
 
                 <img class="hero-photo" src="assets/profile.jpg" alt="Profile">
@@ -160,7 +160,6 @@
     <!-- Profile page JavaScript -->
     <script>
         const $ = id => document.getElementById(id);
-
         const D = [
             "Vegetarian",
             "Vegan",
@@ -170,25 +169,26 @@
             "Halal",
             "Low sugar"
         ];
-
-        let dt = _l("vp_diets", []);
-        const savedProfile = _l("vp_profile", {});
-        const savedHealth = _l("vp_health", {});
-
-        $("n").value = VP.user.name;
-        $("k").value = VP.user.goalKcal;
-        $("age").value = savedProfile.age || "";
-        $("allergies").value = savedProfile.allergies || "";
-        $("infections").value = savedProfile.infections || "";
-        $("profileHeight").value = savedHealth.h || "";
-        $("profileWeight").value = savedHealth.w || "";
-
+        let dt = [];
+        const api = async (path, method = "GET", payload) => {
+            try {
+                const response = await fetch(path, {
+                    method,
+                    credentials: "same-origin",
+                    headers: payload === undefined ? {} : { "Content-Type": "application/json" },
+                    body: payload === undefined ? undefined : JSON.stringify(payload)
+                });
+                const data = await response.json().catch(() => ({}));
+                if (response.status === 401) location.replace("login.html");
+                return { ok: response.ok, data };
+            } catch {
+                return { ok: false, data: { error: "Cannot reach the server. Start the backend and try again." } };
+            }
+        };
         const dd = () => $("dt").innerHTML = D.map(x =>
-            `<button class="tab" data-d="${x}"
+            `<button type="button" class="tab" data-d="${x}"
             aria-pressed="${dt.includes(x)}">${x}</button>`
         ).join("");
-
-        dd();
 
         $("dt").onclick = e => {
             const x = e.target.dataset.d;
@@ -201,51 +201,110 @@
             dd();
         };
 
-        $("sv").onclick = () => {
-            const age = +$("age").value || "";
-            const height = +$("profileHeight").value || 0;
-            const weight = +$("profileWeight").value || 0;
-            if (age && (age < 1 || age > 120)) {
-                $("ok").textContent = "Enter an age between 1 and 120.";
+        const showError = message => {
+            $("ok").textContent = message;
+            $("ok").setAttribute("role", "alert");
+        };
+        const optionalNumber = value => value.trim() === "" ? null : Number(value);
+        async function loadProfile() {
+            const [profile, dietary] = await Promise.all([
+                api("/api/profile"),
+                api("/api/dietary")
+            ]);
+            if (!profile.ok || !dietary.ok) {
+                showError(profile.data.error || dietary.data.error || "Could not load your profile.");
                 return;
             }
-            if (height && (height < 100 || height > 230)) {
-                $("ok").textContent = "Enter a height between 100 and 230 cm.";
+            const saved = profile.data;
+            $("n").value = saved.name || "";
+            $("k").value = saved.calorie_goal ?? 1800;
+            $("age").value = saved.age ?? "";
+            $("allergies").value = (saved.allergies || []).join(", ");
+            $("infections").value = saved.health_notes || "";
+            $("profileHeight").value = saved.height ?? "";
+            $("profileWeight").value = saved.weight ?? "";
+            dt = dietary.data.diets || [];
+            dd();
+            $("sv").disabled = false;
+        }
+
+        $("sv").onclick = async () => {
+            $("ok").textContent = "";
+            $("ok").setAttribute("role", "status");
+            const age = optionalNumber($("age").value);
+            const height = optionalNumber($("profileHeight").value);
+            const weight = optionalNumber($("profileWeight").value);
+            const calorieGoal = optionalNumber($("k").value);
+            const name = $("n").value.trim();
+            if (name.length < 2 || name.length > 60) {
+                showError("Enter a name between 2 and 60 characters.");
                 return;
             }
-            if (weight && (weight < 25 || weight > 250)) {
-                $("ok").textContent = "Enter a weight between 25 and 250 kg.";
+            if (age !== null && (!Number.isInteger(age) || age < 1 || age > 120)) {
+                showError("Enter a whole-number age between 1 and 120.");
+                return;
+            }
+            if (height !== null && (!Number.isFinite(height) || height < 100 || height > 230)) {
+                showError("Enter a height between 100 and 230 cm.");
+                return;
+            }
+            if (weight !== null && (!Number.isFinite(weight) || weight < 25 || weight > 250)) {
+                showError("Enter a weight between 25 and 250 kg.");
+                return;
+            }
+            if (!Number.isInteger(calorieGoal) || calorieGoal < 1000 || calorieGoal > 4000) {
+                showError("Enter a daily calorie goal between 1000 and 4000.");
                 return;
             }
 
-            _s("vp_user", {
-                ...VP.user,
-                name: $("n").value.trim() || "Friend",
-                goalKcal: +$("k").value || 1800
-            });
-            _s("vp_profile", {
+            const button = $("sv");
+            button.disabled = true;
+            const profile = await api("/api/profile", "PUT", {
+                name,
                 age,
-                allergies: $("allergies").value.trim(),
-                infections: $("infections").value.trim()
+                height,
+                weight,
+                allergies: $("allergies").value,
+                health_notes: $("infections").value,
+                calorie_goal: calorieGoal
             });
-            if (height || weight) {
-                _s("vp_health", { ...savedHealth, h: height || savedHealth.h || "", w: weight || savedHealth.w || "", t: savedHealth.t || "" });
+            if (!profile.ok) {
+                showError(profile.data.error || "Could not save your profile.");
+                button.disabled = false;
+                return;
             }
-            _s("vp_diets", dt);
+            const dietary = await api("/api/dietary", "PUT", { diets: dt });
+            if (!dietary.ok) {
+                showError(dietary.data.error || "Could not save your dietary preferences.");
+                button.disabled = false;
+                return;
+            }
+            VP.diets = dietary.data.diets;
+            VP.user.name = profile.data.name;
+            VP.user.goalKcal = profile.data.calorie_goal || 1800;
+            window.dispatchEvent(new Event("vp-data-ready"));
+            if (typeof updateShellName === "function") updateShellName(VP.user.name);
+            if (typeof updateShellGoal === "function") updateShellGoal(VP.user.goalKcal);
             $("ok").textContent = "Profile saved ✓";
+            button.disabled = false;
         };
 
-        $("rs").onclick = () => {
-            if (confirm("Delete VitaPlate data saved in this browser? Other websites' data will not be changed.")) {
-                const keysToRemove = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key && key.startsWith("vp_")) keysToRemove.push(key);
-                }
-                keysToRemove.forEach(key => localStorage.removeItem(key));
-                location.reload();
+        $("rs").onclick = async () => {
+            if (!confirm("Delete all VitaPlate data saved to your account? Your account and login will remain.")) return;
+            const button = $("rs");
+            button.disabled = true;
+            const result = await api("/api/account/data", "DELETE", { confirm: true });
+            if (!result.ok) {
+                showError(result.data.error || "Could not reset your account data.");
+                button.disabled = false;
+                return;
             }
+            $("ok").textContent = "Your account data was reset.";
+            location.reload();
         };
+        dd();
+        $("sv").disabled = true;
+        loadProfile();
     </script>
 
 </body>

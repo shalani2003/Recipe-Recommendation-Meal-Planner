@@ -7,6 +7,7 @@ tables here, so each owner can start without changing the schema.
 """
 import json
 import sqlite3
+from contextlib import closing
 from datetime import date, timedelta
 
 from flask import current_app, g
@@ -37,6 +38,17 @@ CREATE TABLE IF NOT EXISTS pantry_items (
 );
 CREATE INDEX IF NOT EXISTS idx_pantry_user ON pantry_items(user_id);
 
+CREATE TABLE IF NOT EXISTS pantry (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name        TEXT NOT NULL,
+    category    TEXT NOT NULL DEFAULT 'Other',
+    quantity    REAL NOT NULL DEFAULT 1,
+    unit        TEXT NOT NULL DEFAULT 'pcs',
+    expiry_date TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pantry_merge_key ON pantry(user_id, lower(name), unit);
+
 -- Diets, allergies, onboarding flag (P4)
 CREATE TABLE IF NOT EXISTS dietary (
     user_id              INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -49,6 +61,11 @@ CREATE TABLE IF NOT EXISTS dietary (
 CREATE TABLE IF NOT EXISTS user_settings (
     user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     prefs   TEXT NOT NULL DEFAULT '{}'
+);
+CREATE TABLE IF NOT EXISTS settings (
+    user_id         INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    preferences     TEXT NOT NULL DEFAULT '{}',
+    profile_picture TEXT
 );
 
 -- Recipes, favourites, ratings, shopping list (owner: S. Y. S. Jayathilaka)
@@ -113,17 +130,22 @@ CREATE TABLE IF NOT EXISTS weight_log (
     logged_on TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS profiles (
-    user_id      INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    age          INTEGER,
-    calorie_goal INTEGER,
-    health_notes TEXT NOT NULL DEFAULT ''
+    user_id       INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    name          TEXT NOT NULL DEFAULT '',
+    age           INTEGER,
+    height        REAL,
+    weight        REAL,
+    allergies     TEXT NOT NULL DEFAULT '[]',
+    health_notes  TEXT NOT NULL DEFAULT '',
+    calorie_goal  INTEGER,
+    target_weight REAL
 );
 """
 
 # Tables whose rows belong to one user. "Reset all data" clears these (the login stays).
 USER_DATA_TABLES = [
-    "pantry_items", "dietary", "user_settings", "favourites", "ratings", "shopping_items",
-    "meal_plan", "water", "health", "weight_log", "profiles",
+    "pantry_items", "pantry", "dietary", "user_settings", "settings", "favourites", "ratings",
+    "shopping_items", "meal_plan", "water", "health", "weight_log", "profiles",
 ]
 
 LEGACY_RECIPES = [
@@ -153,13 +175,41 @@ def close_db(_exc=None):
 
 def init_db(path):
     """Create all tables and seed the sample recipes (safe to run on every start)."""
-    with sqlite3.connect(path) as db:
+    with closing(sqlite3.connect(path)) as db, db:
         db.executescript(SCHEMA)
         # Older databases made before this version only had users(id, name, email, password_hash).
         cols = {r[1] for r in db.execute("PRAGMA table_info(users)")}
         for col in ("recovery_hash", "picture"):
             if col not in cols:
                 db.execute("ALTER TABLE users ADD COLUMN %s TEXT" % col)
+        profile_cols = {r[1] for r in db.execute("PRAGMA table_info(profiles)")}
+        profile_migrations = {
+            "name": "TEXT NOT NULL DEFAULT ''",
+            "height": "REAL",
+            "weight": "REAL",
+            "allergies": "TEXT NOT NULL DEFAULT '[]'",
+            "target_weight": "REAL",
+        }
+        for col, definition in profile_migrations.items():
+            if col not in profile_cols:
+                db.execute("ALTER TABLE profiles ADD COLUMN %s %s" % (col, definition))
+        db.execute(
+            "UPDATE profiles SET allergies = (SELECT dietary.allergies FROM dietary "
+            "WHERE dietary.user_id = profiles.user_id) "
+            "WHERE EXISTS (SELECT 1 FROM dietary WHERE dietary.user_id = profiles.user_id)"
+        )
+        pantry_cols = {r[1] for r in db.execute("PRAGMA table_info(pantry)")}
+        if "category" not in pantry_cols:
+            db.execute("ALTER TABLE pantry ADD COLUMN category TEXT NOT NULL DEFAULT 'Other'")
+        db.execute(
+            "INSERT INTO pantry (user_id, name, category, quantity, unit, expiry_date) "
+            "SELECT old.user_id, MIN(old.name), MIN(old.cat), SUM(old.qty), old.unit, MIN(old.exp) "
+            "FROM pantry_items AS old "
+            "WHERE NOT EXISTS (SELECT 1 FROM pantry AS new "
+            "WHERE new.user_id = old.user_id AND lower(new.name) = lower(old.name) "
+            "AND new.unit = old.unit) "
+            "GROUP BY old.user_id, lower(old.name), old.unit"
+        )
         if db.execute("SELECT COUNT(*) FROM recipes").fetchone()[0] == 0:
             for name, ing, ins, img in LEGACY_RECIPES:
                 db.execute(
@@ -180,7 +230,7 @@ def import_recipes_json(db_path, json_path):
         return
     if not isinstance(saved, list):
         return
-    with sqlite3.connect(db_path) as db:
+    with closing(sqlite3.connect(db_path)) as db, db:
         for r in saved:
             name = str(r.get("name") or "").strip()
             if not name or db.execute("SELECT 1 FROM recipes WHERE name = ?", (name,)).fetchone():
@@ -200,6 +250,7 @@ def seed_new_user(db, user_id):
     ]
     for name, cat, qty, unit, exp in sample:
         db.execute(
-            "INSERT INTO pantry_items (user_id, name, cat, qty, unit, exp) VALUES (?,?,?,?,?,?)",
+            "INSERT INTO pantry (user_id, name, category, quantity, unit, expiry_date) "
+            "VALUES (?,?,?,?,?,?)",
             (user_id, name, cat, qty, unit, exp.isoformat() if exp else None),
         )

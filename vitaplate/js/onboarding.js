@@ -1,17 +1,23 @@
 const $=id=>document.getElementById(id);
-const session=_l("vp_session",null);
-const email=session?.email;
-const user=VP.user;
-const profiles=_l("vp_diet_profiles",{});
-if(!session||!email)location.replace("login.html");
-else if(profiles[email]?.completed)location.replace("index.html");
-
+let user={name:"Friend"};
 let currentStep=0;
 const steps=[...document.querySelectorAll(".onboarding-step")];
 const dots=[...document.querySelectorAll(".step-dots span")];
 const dietInputs=[...document.querySelectorAll('input[name="diet"]')];
 const allergyInputs=[...document.querySelectorAll('input[name="allergy"]')];
 const conditionInputs=[...document.querySelectorAll('input[name="condition"]')];
+async function api(path,method="GET",payload){
+  try{
+    const response=await fetch(path,{method,credentials:"same-origin",
+      headers:payload===undefined?{}:{"Content-Type":"application/json"},
+      body:payload===undefined?undefined:JSON.stringify(payload)});
+    const data=await response.json().catch(()=>({}));
+    if(response.status===401){location.replace("login.html");return{ok:false,data:{error:"Please log in again."}}}
+    return{ok:response.ok,data};
+  }catch(error){
+    return{ok:false,data:{error:"Cannot reach the server. Start the backend and try again."}};
+  }
+}
 
 function setExclusiveNone(inputs){
   inputs.forEach(input=>input.addEventListener("change",()=>{
@@ -43,6 +49,10 @@ function renderWelcome(){
   summary.push(answers.conditions.length?`Health considerations noted: ${answers.conditions.join(", ")}.`:"No health conditions added.");
   $("welcomeSummary").textContent=summary.join(" ");
 }
+function showError(message){
+  $("saveError").textContent=message;
+  $("dietError").textContent=message;
+}
 function showStep(index){
   currentStep=index;
   steps.forEach((step,i)=>step.hidden=i!==index);
@@ -54,13 +64,21 @@ function showStep(index){
 }
 async function saveProfile(){
   const answers=getAnswers();
-  profiles[email]={...answers,completed:true};
-  _s("vp_diet_profiles",profiles);
   const diets=answers.diet==="Vegetarian"?["Vegetarian"]:[];
-  _s("vp_diets",diets);
-  // Save to the account on the server so it follows the user, not the browser.
-  try{await fetch("/api/dietary",{method:"PUT",headers:{"Content-Type":"application/json"},credentials:"same-origin",
-    body:JSON.stringify({diets,allergies:answers.allergies,onboarding_completed:true})})}catch{}
+  $("nextButton").disabled=true;
+  showError("");
+  const dietary=await api("/api/dietary","PUT",{diets,allergies:answers.allergies,onboarding_completed:true});
+  if(!dietary.ok){
+    showError(dietary.data.error||"Could not save your dietary preferences.");
+    $("nextButton").disabled=false;
+    return;
+  }
+  const profile=await api("/api/profile","PUT",{health_notes:answers.conditions.join(", ")});
+  if(!profile.ok){
+    showError(profile.data.error||"Could not save your health considerations.");
+    $("nextButton").disabled=false;
+    return;
+  }
   location.href="index.html";
 }
 
@@ -75,4 +93,32 @@ $("nextButton").addEventListener("click",()=>{
   if(currentStep===steps.length-2)renderWelcome();
   showStep(currentStep+1);
 });
+async function initialize(){
+  $("nextButton").disabled=true;
+  const [me,dietary,profile]=await Promise.all([
+    api("/api/me"),
+    api("/api/dietary"),
+    api("/api/profile")
+  ]);
+  if(!me.ok||!dietary.ok||!profile.ok){
+    showError(me.data.error||dietary.data.error||profile.data.error||"Could not load your profile.");
+    return;
+  }
+  user=me.data.user;
+  VP.user.name=user.name;
+  if(dietary.data.onboarding_completed){location.replace("index.html");return}
+  const dietRadio=dietInputs.find(input=>input.value==="Vegetarian");
+  if(dietRadio&&dietary.data.diets.includes("Vegetarian"))dietRadio.checked=true;
+  const selectedAllergies=new Set(dietary.data.allergies.map(value=>value.toLowerCase()));
+  allergyInputs.forEach(input=>{input.checked=selectedAllergies.has(input.value.toLowerCase())});
+  const knownAllergies=new Set(allergyInputs.map(input=>input.value.toLowerCase()));
+  $("allergyOther").value=dietary.data.allergies.filter(value=>!knownAllergies.has(value.toLowerCase())).join(", ");
+  const notes=(profile.data.health_notes||"").split(",").map(value=>value.trim()).filter(Boolean);
+  conditionInputs.forEach(input=>{input.checked=notes.includes(input.value)});
+  const knownConditions=new Set(conditionInputs.map(input=>input.value));
+  $("conditionOther").value=notes.filter(value=>!knownConditions.has(value)).join(", ");
+  $("nextButton").disabled=false;
+  showStep(0);
+}
 showStep(0);
+initialize();

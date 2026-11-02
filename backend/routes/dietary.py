@@ -31,6 +31,8 @@ def get_dietary():
 def put_dietary():
     """Send any of: diets, allergies, onboarding_completed. Missing keys are left unchanged."""
     data = body()
+    if not isinstance(data, dict):
+        return error("Dietary preferences must be a JSON object")
     db = get_db()
     cur = read(db, g.user_id)
 
@@ -47,7 +49,9 @@ def put_dietary():
             return error("allergies must be a list")
         clean = []
         for a in data["allergies"]:
-            text = " ".join(str(a or "").split()).lower()
+            if not isinstance(a, str):
+                return error("Each allergy must be text")
+            text = " ".join(a.split()).lower()
             if not text:
                 continue
             if len(text) > 40 or BAD_TEXT_RE.search(text):
@@ -59,12 +63,18 @@ def put_dietary():
         cur["allergies"] = clean
 
     if "onboarding_completed" in data:
-        cur["onboarding_completed"] = bool(data["onboarding_completed"])
+        if not isinstance(data["onboarding_completed"], bool):
+            return error("onboarding_completed must be true or false")
+        cur["onboarding_completed"] = data["onboarding_completed"]
 
     db.execute(
         "INSERT INTO dietary (user_id, diets, allergies, onboarding_completed) VALUES (?,?,?,?) "
         "ON CONFLICT(user_id) DO UPDATE SET diets=excluded.diets, allergies=excluded.allergies, "
         "onboarding_completed=excluded.onboarding_completed",
         (g.user_id, json.dumps(cur["diets"]), json.dumps(cur["allergies"]), int(cur["onboarding_completed"])))
+    db.execute(
+        "UPDATE profiles SET allergies = ? WHERE user_id = ?",
+        (json.dumps(cur["allergies"]), g.user_id),
+    )
     db.commit()
     return jsonify(cur)

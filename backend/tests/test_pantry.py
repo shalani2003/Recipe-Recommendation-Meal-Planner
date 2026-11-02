@@ -26,6 +26,23 @@ def test_add_item_and_validation(user):
         assert user.post("/api/pantry", json=payload).status_code == 400, payload
 
 
+def test_pantry_canonical_fields_and_single_item_get(user, user2):
+    response = user.post("/api/pantry", json={
+        "name": "Oats",
+        "quantity": 2.5,
+        "unit": "kg",
+        "category": "Grains",
+        "expiry_date": "2030-01-31",
+    })
+    assert response.status_code == 201
+    item = response.get_json()["item"]
+    assert item["quantity"] == item["qty"] == 2.5
+    assert item["expiry_date"] == item["exp"] == "2030-01-31"
+    assert item["category"] == item["cat"] == "Grains"
+    assert user.get("/api/pantry/%d" % item["id"]).get_json()["item"] == item
+    assert user2.get("/api/pantry/%d" % item["id"]).status_code == 404
+
+
 def test_blank_amount_defaults_to_one_not_zero(user):
     r = user.post("/api/pantry", json={"name": "Salt"})
     assert r.get_json()["item"]["qty"] == 1

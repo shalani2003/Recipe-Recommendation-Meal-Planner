@@ -1,6 +1,5 @@
 // Pantry page, connected to the backend (/api/pantry, /api/dietary).
-// The server keeps the data per account. A copy is mirrored to localStorage (vp_pantry, vp_diets)
-// so pages that are not connected yet (recipes, planner) keep working during the move.
+// Pantry and dietary data belong to the signed-in account on the server.
 const CATS={Vegetables:"🥕",Fruits:"🍎",Grains:"🌾",Protein:"🍗",Dairy:"🥛","Spices & sauces":"🌶️",Other:"🥫"};
 const QUICK=[["Rice","Grains"],["Dhal","Grains"],["Coconut","Fruits"],["Eggs","Protein"],["Onion","Vegetables"],["Tomato","Vegetables"],["Chicken","Protein"],["Curry powder","Spices & sauces"]];
 const DIETS=["Vegetarian","Vegan","Gluten-free","Dairy-free","Nut-free","Halal","Low sugar"];
@@ -21,21 +20,17 @@ async function call(path,method="GET",payload){
   try{
     const r=await fetch(path,{method,credentials:"same-origin",headers:{"Content-Type":"application/json"},body:payload===undefined?undefined:JSON.stringify(payload)});
     const d=await r.json().catch(()=>({}));
-    if(r.status===401){localStorage.removeItem("vp_session");location.replace("login.html")}
+    if(r.status===401)location.replace("login.html")
     return{ok:r.ok,status:r.status,data:d};
   }catch{return{ok:false,status:0,data:{error:"Cannot reach the server. Start the backend and open http://127.0.0.1:5000"}}}
 }
 async function refresh(){
   const [p,d]=await Promise.all([call("/api/pantry?today="+localToday()),call("/api/dietary")]);
   if(!p.ok)toast(p.data.error||"Could not load your pantry.");
-  else{items=p.data.items;summary=p.data.summary;loaded=true}
-  if(d.ok)diets=d.data.diets;
+  else{items=p.data.items;summary=p.data.summary;loaded=true;VP.pantry=items}
+  if(d.ok){diets=d.data.diets;VP.diets=diets}
+  if(p.ok&&d.ok)window.dispatchEvent(new Event("vp-data-ready"));
   render();
-}
-// Copy for the pages that still read browser storage.
-function mirror(){
-  localStorage.setItem("vp_pantry",JSON.stringify(items.map(i=>({id:i.id,name:i.name,cat:i.cat,qty:i.qty,unit:i.unit,exp:i.exp||""}))));
-  localStorage.setItem("vp_diets",JSON.stringify(diets));
 }
 function render(){
   const q=$("filter").value.toLowerCase();
@@ -45,7 +40,6 @@ function render(){
   Object.keys(CATS).map(c=>{const g=shown.filter(i=>i.cat===c);if(!g.length)return"";
    return `<section class="cat"><h3><span>${CATS[c]}</span>${c}<small>${g.length}</small></h3><div class="items">${g.map(card).join("")}</div></section>`}).join("");
   $("diets").innerHTML=DIETS.map(d=>`<button class="chip" aria-pressed="${diets.includes(d)}" data-d="${d}">${d}</button>`).join("");
-  mirror();
 }
 function card(i){
   const d=i.days_left;const s={expired:"exp",today:"soon",soon:"soon",ok:"ok",none:""}[i.state];
@@ -57,7 +51,7 @@ function card(i){
 }
 async function add(name,cat,qty=1,unit="pcs",exp=""){
   if(!name.trim())return toast("Enter an item name.");
-  const r=await call("/api/pantry","POST",{name,cat,qty:qty===""?1:qty,unit,exp});
+  const r=await call("/api/pantry","POST",{name,category:cat,quantity:qty===""?1:qty,unit,expiry_date:exp});
   if(!r.ok)return toast(r.data.error||"Could not add the item.");
   if(r.data.merged)toast("Added to the amount you already have.");
   await refresh();
@@ -66,7 +60,7 @@ async function edit(id){
   const i=items.find(x=>x.id==id);if(!i)return;
   const qty=prompt("Amount ("+i.unit+")",i.qty);if(qty===null)return;
   const exp=prompt("Expiry date (YYYY-MM-DD). Leave empty for none.",i.exp||"");if(exp===null)return;
-  const r=await call("/api/pantry/"+id,"PUT",{qty,exp});
+  const r=await call("/api/pantry/"+id,"PUT",{quantity:qty,expiry_date:exp});
   if(!r.ok)return toast(r.data.error||"Could not save the change.");
   await refresh();
 }

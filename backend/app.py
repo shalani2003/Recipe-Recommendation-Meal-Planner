@@ -20,7 +20,7 @@ FRONTEND_DIR = os.path.join(os.path.dirname(BASE_DIR), "vitaplate")
 
 # Modules owned by the other backend developers. Loaded when the file exists.
 OPTIONAL_MODULES = ["routes.recommend", "routes.shopping", "routes.plan", "routes.nutrition",
-                    "routes.health", "routes.profile", "routes.dashboard"]
+                    "routes.health", "routes.dashboard"]
 
 
 def load_secret_key(path):
@@ -69,8 +69,8 @@ def create_app(test_config=None):
     app.teardown_appcontext(database.close_db)
     auth_helpers.install_guards(app)
 
-    from routes import auth, dietary, pantry, settings
-    for module in (auth, pantry, dietary, settings):
+    from routes import auth, dietary, pantry, profile, settings
+    for module in (auth, pantry, dietary, settings, profile):
         app.register_blueprint(module.bp)
     if not optional_blueprint(app, "routes.recipes"):
         from routes import recipes_legacy

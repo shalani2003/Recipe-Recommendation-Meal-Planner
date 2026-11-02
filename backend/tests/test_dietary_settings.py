@@ -8,6 +8,7 @@ def test_dietary_defaults_and_save(user):
     assert user.get("/api/dietary").get_json() == {"diets": [], "allergies": [], "onboarding_completed": False}
     r = user.put("/api/dietary", json={"diets": ["Vegan", "Halal"], "allergies": [" Eggs ", "eggs", "Peanuts"]})
     assert r.get_json() == {"diets": ["Vegan", "Halal"], "allergies": ["eggs", "peanuts"], "onboarding_completed": False}
+    assert user.get("/api/profile").get_json()["allergies"] == ["eggs", "peanuts"]
     user.put("/api/dietary", json={"onboarding_completed": True})
     got = user.get("/api/dietary").get_json()
     assert got["diets"] == ["Vegan", "Halal"] and got["onboarding_completed"] is True  # partial update keeps the rest
@@ -15,11 +16,18 @@ def test_dietary_defaults_and_save(user):
     assert user.get("/api/dietary").get_json()["diets"] == []
 
 
+def test_profile_and_dietary_allergies_stay_in_sync(user):
+    user.put("/api/profile", json={"allergies": "eggs, peanuts"})
+    assert user.get("/api/dietary").get_json()["allergies"] == ["eggs", "peanuts"]
+
+
 def test_dietary_validation(user):
     assert user.put("/api/dietary", json={"diets": ["Carnivore"]}).status_code == 400
     assert user.put("/api/dietary", json={"diets": "Vegan"}).status_code == 400
     assert user.put("/api/dietary", json={"allergies": ["<script>"]}).status_code == 400
     assert user.put("/api/dietary", json={"allergies": ["x"] * 0 + ["a%d" % i for i in range(25)]}).status_code == 400
+    assert user.put("/api/dietary", json={"onboarding_completed": "false"}).status_code == 400
+    assert user.put("/api/dietary", json=[]).status_code == 400
 
 
 def test_dietary_is_private(user, user2):

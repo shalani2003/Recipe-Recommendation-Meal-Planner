@@ -249,7 +249,7 @@
       }
 
       if (!d.plan && !d.shop) {
-        draw();
+        VP.ready.then(draw);
       }
     });
 
@@ -350,6 +350,7 @@
 
     async function loadApiRecipes() {
       try {
+        await VP.ready;
         const response = await fetch("http://localhost:3000/api/recipes");
         if (!response.ok) throw new Error("The server could not load the recipes.");
 
@@ -371,10 +372,8 @@
       renderApiRecipes(document.getElementById("q").value);
     });
 
-    window.addEventListener("storage", event => {
-      if (event.key === "vp_pantry") {
-        renderApiRecipes(document.getElementById("q").value);
-      }
+    window.addEventListener("vp-data-ready", () => {
+      renderApiRecipes(document.getElementById("q").value);
     });
 
     const addRecipeForm = document.getElementById("add-recipe-form");
@@ -415,7 +414,6 @@
   </script>
 </body>
 </html>
-
 
 
 

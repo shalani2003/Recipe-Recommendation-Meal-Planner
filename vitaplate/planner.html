@@ -157,7 +157,7 @@
 
     // Read saved meal plan
     const get = () => _l("vp_plan", {});
-    const goal = VP.user.goalKcal;
+    let goal = VP.user.goalKcal;
 
     // Draw the weekly meal planner
     function draw() {
@@ -265,7 +265,10 @@
 
         _s("vp_plan", p);
 
-        draw();
+        VP.ready.then(() => {
+            goal = VP.user.goalKcal;
+            draw();
+        });
     });
 
     // Automatically generate meals for the week

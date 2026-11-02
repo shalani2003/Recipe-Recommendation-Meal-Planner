@@ -276,7 +276,7 @@
                         result = canvas.toDataURL("image/jpeg", quality);
                     }
                     if (result.length > MAX_PROFILE_PICTURE_BYTES * 1.37) {
-                        reject(new Error("The image could not be compressed enough for browser storage."));
+                        reject(new Error("The image could not be compressed enough for upload."));
                         return;
                     }
                     resolve(result);
@@ -292,7 +292,7 @@
             try {
                 const r = await fetch(path, { credentials: "same-origin", ...options });
                 const data = await r.json().catch(() => ({}));
-                if (r.status === 401) { localStorage.removeItem("vp_session"); location.replace("login.html"); }
+                if (r.status === 401) location.replace("login.html");
                 return { ok: r.ok, data };
             } catch {
                 return { ok: false, data: { error: "Cannot reach the server. Start the backend and try again." } };
@@ -322,8 +322,10 @@
             if (name !== undefined && typeof updateShellName === "function") updateShellName(name);
         };
         const remember = s => {
-            _s("vp_session", { email: s.email });
-            _s("vp_user", { ..._l("vp_user", {}), name: s.name, profilePicture: s.picture_url || "" });
+            if (window.VP && VP.user) {
+                VP.user.name = s.name;
+                VP.user.profilePicture = s.picture_url || "";
+            }
         };
 
         const fill = s => {
@@ -335,8 +337,10 @@
             showProfilePicture(s.picture_url);
             remember(s);
             refreshShell(s.name, s.picture_url || "");
+            $("save").disabled = false;
         };
 
+        $("save").disabled = true;
         call("/api/settings").then(r => {
             if (r.ok) fill(r.data);
             else $("error").textContent = r.data.error || "Could not load your settings.";
@@ -351,7 +355,7 @@
             if (file.size > MAX_PROFILE_PICTURE_INPUT_BYTES) { $("error").textContent = "Choose an image smaller than 20 MB."; return; }
             const form = new FormData();
             try {
-                // Shrink the photo in the browser first (their helper), then upload the small JPEG.
+                // Shrink the photo in the browser first, then upload the small JPEG.
                 const dataUrl = await compressProfilePicture(file);
                 const bytes = atob(dataUrl.split(",")[1]);   // not fetch(): the page security policy blocks data: URLs there
                 const small = new Blob([Uint8Array.from(bytes, ch => ch.charCodeAt(0))], { type: "image/jpeg" });
@@ -363,7 +367,6 @@
             const r = await call("/api/settings/picture", { method: "POST", body: form });
             if (!r.ok) { $("error").textContent = r.data.error || "The picture could not be saved."; return; }
             showProfilePicture(r.data.picture_url);
-            _s("vp_user", { ..._l("vp_user", {}), profilePicture: r.data.picture_url });
             refreshShell(undefined, r.data.picture_url);
             $("saved").textContent = "Profile picture saved";
         };
@@ -373,7 +376,6 @@
             const r = await call("/api/settings/picture", { method: "DELETE" });
             if (!r.ok) { $("error").textContent = r.data.error || "The picture could not be deleted."; return; }
             showProfilePicture("");
-            _s("vp_user", { ..._l("vp_user", {}), profilePicture: "" });
             refreshShell(undefined, "");
             $("saved").textContent = "Profile picture deleted";
         };

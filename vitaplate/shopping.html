@@ -431,7 +431,7 @@
 				$("nm").addEventListener("keypress", (e) => { if (e.key === "Enter") $("add").click(); });
 
 				// Move to Pantry
-				$("mv").addEventListener("click", () => {
+				$("mv").addEventListener("click", async () => {
 				const boughtItems = S.filter(i => i.done);
 
 				if (boughtItems.length === 0) {
@@ -439,20 +439,45 @@
 				return;
 				}
 
-				const P = _l("vp_pantry", []);
-				boughtItems.forEach(i => {
-				P.push({
-				id: Date.now() + Math.random(),
-				name: i.name,
-				cat: getCategory(i.name),
-				qty: 1,
-				unit: "pcs",
-				exp: ""
-				});
-				});
-
-				_s("vp_pantry", P);
-				S = S.filter(i => !i.done); // Remove bought items from shopping list
+				const moved = [];
+				for (const item of boughtItems) {
+					const name = item.name.toLowerCase();
+					const category = /chicken|beef|pork|meat|fish|salmon|tuna|egg|prawn|dhal|green gram|chickpea/.test(name)
+						? "Protein"
+						: /milk|cheese|yogurt|dairy|butter|cream|curd/.test(name)
+							? "Dairy"
+							: /banana|papaya|mango|pineapple|lime|avocado|apple|coconut/.test(name)
+								? "Fruits"
+								: /chili|turmeric|curry|pepper|cinnamon|cardamom|clove|oil|sauce|tea|coffee/.test(name)
+									? "Spices & sauces"
+									: /rice|bread|flour|grain|quinoa|pasta|oat|kurakkan|sugar|salt/.test(name)
+										? "Grains"
+										: /tomato|onion|garlic|ginger|vegetable|broccoli|carrot|potato|spinach|brinjal|gourd|okra|bean|cabbage|gotukola|mukunuwenna/.test(name)
+											? "Vegetables"
+											: "Other";
+					try {
+						const response = await fetch("/api/pantry", {
+							method: "POST",
+							credentials: "same-origin",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ name: item.name, category, quantity: 1, unit: "pcs" })
+						});
+						const result = await response.json().catch(() => ({}));
+						if (response.status === 401) {
+							location.replace("login.html");
+							return;
+						}
+						if (!response.ok) {
+							alert(result.error || `Could not move ${item.name} to the pantry.`);
+							break;
+						}
+						moved.push(item.id);
+					} catch {
+						alert("Cannot reach the server. Start the backend and try again.");
+						break;
+					}
+				}
+				S = S.filter(i => !moved.includes(i.id)); // Keep any items that failed to move.
 				draw();
 				});
 

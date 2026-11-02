@@ -57,23 +57,25 @@ def add_item(db, user_id, name, cat, qty, unit, exp):
     """Add to the pantry. Same name AND same unit (any letter case) -> quantities are added and
     the earlier expiry date is kept. A different unit stays a separate item, so 1 kg is never
     added to 15 pcs. Returns (row, merged)."""
+    db.execute("BEGIN IMMEDIATE")
     existing = db.execute(
-        "SELECT * FROM pantry_items WHERE user_id = ? AND lower(name) = lower(?) AND unit = ?",
+        "SELECT * FROM pantry WHERE user_id = ? AND lower(name) = lower(?) AND unit = ?",
         (user_id, name, unit),
     ).fetchone()
     if existing:
-        new_qty = min(round(existing["qty"] + qty, 2), MAX_QTY)
-        db.execute("UPDATE pantry_items SET qty = ?, exp = ? WHERE id = ?",
-                   (new_qty, sooner(existing["exp"], exp), existing["id"]))
+        new_qty = min(round(existing["quantity"] + qty, 2), MAX_QTY)
+        db.execute("UPDATE pantry SET quantity = ?, expiry_date = ? WHERE id = ?",
+                   (new_qty, sooner(existing["expiry_date"], exp), existing["id"]))
         item_id, merged = existing["id"], True
     else:
         cur = db.execute(
-            "INSERT INTO pantry_items (user_id, name, cat, qty, unit, exp) VALUES (?,?,?,?,?,?)",
+            "INSERT INTO pantry (user_id, name, category, quantity, unit, expiry_date) "
+            "VALUES (?,?,?,?,?,?)",
             (user_id, name, cat, qty, unit, exp),
         )
         item_id, merged = cur.lastrowid, False
     db.commit()
-    return db.execute("SELECT * FROM pantry_items WHERE id = ?", (item_id,)).fetchone(), merged
+    return db.execute("SELECT * FROM pantry WHERE id = ?", (item_id,)).fetchone(), merged
 
 
 def days_left(exp, today):
