@@ -1,4 +1,5 @@
 """Pantry rules shared by the pantry routes and the shopping list (J7 "move to pantry")."""
+import math
 from datetime import date, datetime
 
 CATEGORIES = ["Vegetables", "Fruits", "Grains", "Protein", "Dairy", "Spices & sauces", "Other"]
@@ -18,11 +19,16 @@ def parse_expiry(value):
 
 
 def parse_qty(value):
-    try:
-        qty = round(float(value), 2)
-    except (TypeError, ValueError):
+    if isinstance(value, bool):
         raise ValueError("Enter an amount as a number")
-    if qty != qty or qty <= 0:
+    try:
+        qty = float(value)
+    except (OverflowError, TypeError, ValueError):
+        raise ValueError("Enter an amount as a number")
+    if not math.isfinite(qty):
+        raise ValueError("Enter an amount as a finite number")
+    qty = round(qty, 2)
+    if qty <= 0:
         raise ValueError("Amount must be greater than 0")
     if qty > MAX_QTY:
         raise ValueError("Amount is too large")

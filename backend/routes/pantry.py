@@ -1,4 +1,5 @@
 """Pantry API (task P3). Quantities can be decimals; an item at 0 is removed."""
+import math
 from datetime import date
 
 from flask import Blueprint, g, jsonify, request
@@ -149,9 +150,9 @@ def change_quantity(item_id):
         if not isinstance(data, dict):
             return error("Quantity update must be a JSON object")
         delta = float(data.get("delta"))
-    except (TypeError, ValueError):
+    except (OverflowError, TypeError, ValueError):
         return error("Send delta as a number, for example 1 or -1")
-    if delta != delta or abs(delta) > ps.MAX_QTY:
+    if isinstance(data.get("delta"), bool) or not math.isfinite(delta) or abs(delta) > ps.MAX_QTY:
         return error("Send delta as a number, for example 1 or -1")
     new_qty = round(row["quantity"] + delta, 2)
     db = get_db()

@@ -26,7 +26,7 @@ def parse_number(value, field, limits):
         return None, "%s must be a number" % field.replace("_", " ")
     try:
         number = float(value)
-    except (TypeError, ValueError):
+    except (OverflowError, TypeError, ValueError):
         return None, "%s must be a number" % field.replace("_", " ")
     if not math.isfinite(number):
         return None, "%s must be a finite number" % field.replace("_", " ")

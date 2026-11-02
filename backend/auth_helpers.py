@@ -30,7 +30,11 @@ def clean_email(value):
 
 def clean_text(value, label, min_len=1, max_len=60):
     """Trim a text value and reject markup characters. Returns (text, problem)."""
-    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    if value is None:
+        value = ""
+    elif not isinstance(value, str):
+        return None, "%s must be text" % label.capitalize()
+    text = re.sub(r"\s+", " ", value).strip()
     if len(text) < min_len:
         return None, "Enter %s" % label
     if len(text) > max_len:
@@ -41,6 +45,8 @@ def clean_text(value, label, min_len=1, max_len=60):
 
 
 def password_problem(pw):
+    if not isinstance(pw, str):
+        return "Password must be text"
     if len(pw) < 8 or not re.search(r"\d", pw):
         return "Use 8+ characters with at least one number"
     if len(pw) > 128:

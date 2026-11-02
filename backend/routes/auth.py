@@ -49,7 +49,7 @@ def register():
     email = clean_email(data.get("email"))
     if not EMAIL_RE.match(email) or len(email) > 120:
         return error("Enter a valid email")
-    pw = str(data.get("password") or "")
+    pw = data.get("password")
     problem = password_problem(pw)
     if problem:
         return error(problem)
@@ -77,10 +77,10 @@ def login():
     if not isinstance(data, dict):
         return error("Login details must be a JSON object")
     email = clean_email(data.get("email"))
-    pw = str(data.get("password") or "")
+    pw = data.get("password")
     if not EMAIL_RE.match(email):
         return error("Enter a valid email")
-    if not pw:
+    if not isinstance(pw, str) or not pw:
         return error("Enter your password")
     if rate_limited("login:%s:%s" % (request.remote_addr, email), limit=8, window=300):
         return error("Too many attempts. Wait a few minutes and try again.", 429)
@@ -138,7 +138,7 @@ def reset_password():
     data = body()
     if not isinstance(data, dict):
         return error("Password reset details must be a JSON object")
-    pw = str(data.get("password") or "")
+    pw = data.get("password")
     problem = password_problem(pw)
     if problem:
         return error(problem)
@@ -154,10 +154,14 @@ def reset_password():
         return bad_token
 
     code = new_recovery_code()  # the old code is replaced after every reset
-    db.execute(
-        "UPDATE users SET password_hash = ?, recovery_hash = ? WHERE id = ?",
-        (generate_password_hash(pw), generate_password_hash(norm_code(code)), row["id"]),
+    updated = db.execute(
+        "UPDATE users SET password_hash = ?, recovery_hash = ? "
+        "WHERE id = ? AND password_hash = ?",
+        (generate_password_hash(pw), generate_password_hash(norm_code(code)),
+         row["id"], row["password_hash"]),
     )
+    if updated.rowcount != 1:
+        return bad_token
     db.commit()
     session.clear()
     return jsonify({"ok": True, "recovery_code": code})

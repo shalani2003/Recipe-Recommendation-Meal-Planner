@@ -14,8 +14,10 @@ def test_register_login_me_logout(app):
 
 def test_register_validation(client):
     bad = [({"name": "", "email": "a@b.co", "password": "secret123"}, 400),
+           ({"name": 123, "email": "a@b.co", "password": "secret123"}, 400),
            ({"name": "Al", "email": "nope", "password": "secret123"}, 400),
            ({"name": "Al", "email": "a@b.co", "password": "short1"}, 400),
+           ({"name": "Al", "email": "a@b.co", "password": {"value": "secret123"}}, 400),
            ({"name": "Al", "email": "a@b.co", "password": "nodigitshere"}, 400),
            ({"name": "<script>alert(1)</script>", "email": "a@b.co", "password": "secret123"}, 400)]
     for payload, status in bad:
@@ -80,8 +82,19 @@ def test_reset_needs_recovery_code(app):
 def test_reset_token_rejects_garbage_and_weak_password(app):
     c, data = make_user(app)
     assert c.post("/api/reset-password", json={"token": "garbage", "password": "newpass123"}).status_code == 400
+    assert c.post("/api/reset-password", json={"token": "garbage", "password": {"value": "newpass123"}}).status_code == 400
     token = c.post("/api/forgot-password", json={"email": "nimal@example.com", "recovery_code": data["recovery_code"]}).get_json()["reset_token"]
     assert c.post("/api/reset-password", json={"token": token, "password": "weak"}).status_code == 400
+
+
+def test_reset_code_issues_only_one_effective_reset(app):
+    c, data = make_user(app)
+    payload = {"email": "nimal@example.com", "recovery_code": data["recovery_code"]}
+    first = c.post("/api/forgot-password", json=payload).get_json()["reset_token"]
+    second = c.post("/api/forgot-password", json=payload).get_json()["reset_token"]
+
+    assert c.post("/api/reset-password", json={"token": first, "password": "newpass123"}).status_code == 200
+    assert c.post("/api/reset-password", json={"token": second, "password": "another123"}).status_code == 400
 
 
 def test_api_requires_login(client):

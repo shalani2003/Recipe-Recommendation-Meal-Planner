@@ -53,6 +53,7 @@ def test_profile_validation(user):
         {"age": 2.5},
         {"height": 99},
         {"height": 231},
+        {"height": 10 ** 400},
         {"weight": 24.9},
         {"weight": 251},
         {"calorie_goal": 999},
