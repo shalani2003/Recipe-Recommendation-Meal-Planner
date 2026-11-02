@@ -344,15 +344,33 @@
 				};
 
 				// 4. Category Mapping
-				function getCategory(name) {
-				const n = name.toLowerCase();
-				if (/chicken|beef|pork|meat|fish|salmon|tuna|egg|prawn|maldive|dhal|green gram|chickpeas|cowpea/.test(n)) return "Protein";
-				if (/milk|cheese|yogurt|dairy|butter|cream|curd/.test(n)) return "Dairy";
-				if (/tomato|avocado|onion|garlic|ginger|vegetable|broccoli|carrot|potato|salad|spinach|apple|banana|fruit|coconut|pumpkin|brinjal|gourd|okra|beans|cabbage|gotukola|mukunuwenna|papaya|mango|pineapple|lime/.test(n)) return "Produce";
-				if (/rice|bread|flour|grain|quinoa|pasta|nut|seed|oats|kurakkan|sugar|salt/.test(n)) return "Pantry";
-				if (/chili|turmeric|curry|pepper|cinnamon|cardamom|cloves|oil|sauce|tea|coffee/.test(n)) return "Spices & Oils";
-				return "Other";
-				}
+				
+function getCategory(name) {
+    const n = name.toLowerCase().trim();
+
+    if (/milk|cheese|yogurt|dairy|butter|cream|curd/.test(n)) {
+        return "Dairy";
+    }
+
+    if (/chicken|beef|pork|meat|fish|salmon|tuna|egg|prawn|maldive/.test(n)) {
+        return "Protein";
+    }
+
+    if (/dhal|lentil|gram|chickpea|cowpea|bean|rice|bread|flour|grain|quinoa|pasta|nut|seed|oats|kurakkan|sugar|salt/.test(n)) {
+        return "Pantry";
+    }
+
+    if (/tomato|avocado|onion|garlic|ginger|vegetable|broccoli|carrot|potato|salad|spinach|apple|banana|fruit|coconut|pumpkin|brinjal|gourd|okra|cabbage|gotukola|mukunuwenna|papaya|mango|pineapple|lime/.test(n)) {
+        return "Produce";
+    }
+
+    if (/chili|turmeric|curry|pepper|cinnamon|cardamom|cloves|oil|sauce|tea|coffee/.test(n)) {
+        return "Spices & Oils";
+    }
+
+    return "Other";
+}
+
 
 				// 5. Image Resolver with Bulletproof Fallback
 				function getImage(name) {
