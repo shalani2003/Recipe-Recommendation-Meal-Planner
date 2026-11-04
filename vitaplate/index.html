@@ -19,80 +19,10 @@
     <div class="bottom-note"><span style="font-size:1.8rem">🌿</span><div><b>Progress, not perfection.</b><br><span>Every nourishing choice is a step towards a healthier you.</span></div></div>
   </div>
   <aside class="dash-sidebar">
-    <section class="side-card water-panel"><div class="side-title"><h2>💧 Stay hydrated</h2><span>🌿</span></div><p>Water helps your body and mind work their best.</p><div class="water-value"><span id="waterCount">0</span> <span>/ 8 glasses</span></div><div class="water-bar"><i id="waterBar"></i></div><div class="water-controls"><button id="waterMinus" type="button" aria-label="Remove glass">−</button><button id="waterPlus" type="button">+ Add a glass</button></div></section>
+    <section class="side-card water-panel"><div class="side-title"><h2>💧 Stay hydrated</h2><span>🌿</span></div><p>Water helps your body and mind work their best.</p><div class="water-value"><span id="waterCount">0</span> <span>/ 8 glasses</span></div><div class="water-bar"><i id="waterBar"></i></div><div class="water-controls"><button id="waterMinus" type="button" aria-label="Remove glass">−</button><button id="waterPlus" type="button">+ Add a glass</button></div><p id="waterStatus" class="muted" role="status"></p></section>
     <section class="side-card"><div class="side-title"><h2>🗓️ Today's meal plan</h2><a href="planner.html" style="color:#388b43;font-size:.8rem">View all →</a></div><div id="mealPlanList"></div></section>
     <section class="side-card quote-panel"><blockquote>“Healthy food is a form of self-respect.”</blockquote><span>♥ Choose well, feel well.</span></section>
     <section class="side-card"><div class="side-title"><h2>🥗 Quick wellness tip</h2></div><p style="color:var(--muted);font-size:.9rem">Try to include colourful vegetables in at least two meals today. Different colours bring different nutrients.</p><a href="health.html" class="recipe-button">Explore wellness</a></section>
   </aside></div>
 </main></div>
-<script src="js/data.js"></script><script src="js/components.js"></script><script src="js/app.js"></script><script>
-const hour=new Date().getHours();
-const greeting=hour<12?['☀️','Good morning']:hour<18?['🌤️','Good afternoon']:['🌙','Good night'];
-async function updateAccountSummary(){
-  const u=VP.user;
-  document.getElementById('hello').innerHTML='<span class="greeting-icon">'+greeting[0]+'</span>'+greeting[1]+', '+u.name+'!';
-  const [recipeResult,planResult]=await Promise.all([
-    accountRequest("/api/recipes"),
-    accountRequest("/api/meal-plan")
-  ]);
-  if(!recipeResult||!planResult)return;
-  const serverRecipes=Array.isArray(recipeResult)?recipeResult:recipeResult.recipes||[];
-  const recipes=[
-    ...R,
-    ..._l("vp_recipe_catalog",[]),
-    ...serverRecipes.map(recipe=>({
-      ...recipe,
-      ing:recipe.ingredients||[],
-      kcal:recipe.kcal||0,
-      p:recipe.protein||recipe.p||0,
-      c:recipe.carbs||recipe.c||0,
-      f:recipe.fat||recipe.f||0
-    }))
-  ];
-  const day=DAYS[(new Date().getDay()+6)%7];
-  const plannedMeals=(planResult.meals||[])
-    .filter(item=>item.day===day)
-    .map(item=>({
-      meal:item.meal,
-      recipe:recipes.find(recipe=>recipe.name.toLowerCase()===item.recipe_name.toLowerCase())
-        ||{name:item.recipe_name,kcal:0,p:0,c:0,f:0}
-    }));
-  const totals=plannedMeals.reduce((sum,{recipe})=>({
-    kcal:sum.kcal+(Number(recipe.kcal)||0),
-    p:sum.p+(Number(recipe.p)||Number(recipe.protein)||0),
-    c:sum.c+(Number(recipe.c)||Number(recipe.carbs)||0),
-    f:sum.f+(Number(recipe.f)||Number(recipe.fat)||0)
-  }),{kcal:0,p:0,c:0,f:0});
-  document.getElementById('eaten').textContent=totals.kcal.toLocaleString();
-  document.getElementById('calorieGoal').textContent='of '+u.goalKcal.toLocaleString()+' kcal daily goal';
-  document.getElementById('calorieBar').style.width=Math.min(100,totals.kcal/u.goalKcal*100)+'%';
-  [['protein',totals.p,u.macros.protein],['carbs',totals.c,u.macros.carbs],['fat',totals.f,u.macros.fat]].forEach(([name,value,range])=>{
-    const [min,max]=range;
-    document.getElementById(name).textContent=value.toLocaleString();
-    document.getElementById(name+'Target').textContent=`Target: ${min}-${max} g`;
-    document.getElementById(name+'Bar').style.width=Math.min(100,max?value/max*100:0)+'%';
-  });
-  const mealList=document.getElementById('mealPlanList');
-  mealList.replaceChildren();
-  if(plannedMeals.length){
-    const mealImages={1:"assets/food/chicken-quinoa.jpg",2:"assets/food/lentil-soup.jpg",3:"assets/food/salad-bowl.jpg",4:"assets/food/avocado-toast.jpg",5:"assets/food/avocado-toast.jpg",6:"assets/food/salad-bowl.jpg",7:"assets/food/lentil-soup.jpg",8:"assets/food/chicken-quinoa.jpg"};
-    plannedMeals.forEach(({meal,recipe})=>{
-      const row=document.createElement('div'),image=document.createElement('img'),details=document.createElement('div'),name=document.createElement('div'),summary=document.createElement('small');
-      row.className='meal-row';image.src=recipe.image||mealImages[recipe.id]||'assets/food/salad-bowl.jpg';image.alt=recipe.name;
-      name.className='meal-name';name.textContent=meal;summary.textContent=`${recipe.name} · ${recipe.kcal} kcal`;
-      details.append(name,summary);row.append(image,details);mealList.append(row);
-    });
-  }else{
-    const message=document.createElement('p'),link=document.createElement('a');
-    message.className='muted';message.textContent='Nothing planned for today. ';
-    link.href='planner.html';link.textContent='Plan meals';link.style.color='#388b43';
-    message.append(link);mealList.append(message);
-  }
-}
-VP.ready.then(updateAccountSummary).catch(error=>showAccountError(error.message||"Could not load today's meal plan."));
-let water=6;
-function updateWater(){document.getElementById('waterCount').textContent=water;document.getElementById('waterBar').style.width=(water/8*100)+'%';document.getElementById('waterMinus').disabled=water===0;document.getElementById('waterPlus').disabled=water===8}
-document.getElementById('waterPlus').onclick=()=>{water=Math.min(8,water+1);updateWater()};
-document.getElementById('waterMinus').onclick=()=>{water=Math.max(0,water-1);updateWater()};
-updateWater();
-</script></body></html>
+<script src="js/data.js"></script><script src="js/components.js"></script><script src="js/app.js"></script><script src="js/dashboard.js"></script></body></html>
