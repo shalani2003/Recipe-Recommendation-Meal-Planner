@@ -106,3 +106,11 @@ Profile weight updates are also appended to `weight_log` only when the saved wei
 |---|---|---|
 | GET | `/recipes` | Public. `[{id, name, ingredients, instructions, image}]` |
 | POST | `/recipes` | multipart: `name`, `ingredients` (comma separated), `instructions`, `imageFile` (optional; JPG/PNG/WebP, up to 5 MB). Reply: `{success, message, recipe}` |
+
+## Recommendations
+
+| Method | Path | Result |
+|---|---|---|
+| GET | `/recommendations` | Requires a session. `{recommendations: [{id, name, ingredients, instructions, image, diets, time_min, kcal, protein, carbs, fat, pantry_match, favorite}]}` |
+
+Recommendations are ranked by ingredient overlap with the logged-in user's pantry, then by saved favorites. Nutrition fields can be `null` when the recipe has no nutrition data.
