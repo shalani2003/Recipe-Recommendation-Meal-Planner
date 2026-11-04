@@ -1,5 +1,4 @@
-/* Pantry page - green theme (overrides brand accent for this page only) */
-body.pantry{--olive:#2f7d3a;--olive-dk:#1f5a29;--peach:#d9f0d2;--peach-lt:#eef8ea;--leaf:#154a22;--lime:#b7e35a}
+/* Pantry page layout */
 .hero{background:var(--leaf);color:#fff;border-radius:var(--r-lg);padding:30px 32px;display:grid;grid-template-columns:1.4fr 1fr;gap:24px;align-items:center;position:relative;overflow:hidden;margin-bottom:24px}
 .hero::after{content:"🥬";position:absolute;right:-10px;bottom:-34px;font-size:9rem;opacity:.14;pointer-events:none}
 .hero h1{color:#fff}.hero p{color:#cfe8c8;margin-top:6px;max-width:46ch}

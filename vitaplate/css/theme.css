@@ -45,7 +45,6 @@ body.auth>.theme-toggle{position:fixed;top:16px;right:16px;z-index:10;box-shadow
 /* Dark palette and component surfaces */
 html[data-theme=dark]{color-scheme:dark;--olive:#347d40;--olive-dk:#c3dfbd;--peach:#304c37;--peach-lt:#26382b;--leaf:#154a22;--lime:#b7e35a;--bg:#151c17;--card:#202a22;--line:#39483b;--ink:#edf3ed;--muted:#b4c0b5;--sage:#75ad69;--sage-lt:#2c402f;--input-bg:#1a241c;--surface-alt:#303b32;--surface-soft:#252f27;--food-line:#39483b;--food-ink:#e1eee2}
 html[data-theme=dark] body{background:var(--bg);color:var(--ink)}
-html[data-theme=dark] body.pantry{--olive:#347d40;--olive-dk:#c3dfbd;--peach:#304c37;--peach-lt:#26382b;--leaf:#154a22;--lime:#b7e35a}
 html[data-theme=dark] body .sidebar,
 html[data-theme=dark] body .topbar,
 html[data-theme=dark] body .card,
