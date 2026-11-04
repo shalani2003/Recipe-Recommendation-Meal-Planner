@@ -200,6 +200,7 @@
         }
     }
     async function loadPlan() {
+        renderState($("days"), "loading", "Loading your meal plan");
         try {
             await VP.ready;
             const [catalogResult, planResult] = await Promise.all([
@@ -235,7 +236,7 @@
             goal = VP.user.goalKcal;
             draw();
         } catch (error) {
-            $("days").textContent = error.message || "Could not load your meal plan.";
+            renderState($("days"), "error", error.message || "Could not load your meal plan.", loadPlan);
         }
     }
     // Draw the weekly meal planner

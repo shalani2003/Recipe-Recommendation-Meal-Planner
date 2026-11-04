@@ -5,7 +5,7 @@ const DIETS=["Vegetarian","Vegan","Gluten-free","Dairy-free","Nut-free","Halal",
 const MAX_QUANTITY=100000;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-let items=[],diets=[],summary={items:0,use_soon:0,expired:0},loaded=false;
+let items=[],diets=[],summary={items:0,use_soon:0,expired:0},loaded=false,loadError="";
 
 const localToday=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 
@@ -37,8 +37,8 @@ function validateAmount(raw){
 }
 async function refresh(){
   const [p,d]=await Promise.all([call("/api/pantry?today="+localToday()),call("/api/dietary")]);
-  if(!p.ok)toast(p.data.error||"Could not load your pantry.");
-  else{items=p.data.items;summary=p.data.summary;loaded=true;VP.pantry=items}
+  if(!p.ok){loadError=p.data.error||"Could not load your pantry."}
+  else{loadError="";items=p.data.items;summary=p.data.summary;loaded=true;VP.pantry=items}
   if(!d.ok)toast(d.data.error||"Could not load your dietary preferences.");
   else{diets=d.data.diets;VP.diets=diets;VP.dietary=d.data}
   if(p.ok&&d.ok)window.dispatchEvent(new Event("vp-data-ready"));
@@ -51,7 +51,10 @@ function render(){
   $("sSoon").textContent=summary.use_soon;
   $("sExpired").textContent=summary.expired;
   $("sDiet").textContent=diets.length;
-  $("groups").innerHTML=!shown.length?`<div class="empty"><div class="big">🧺</div><h3>${!loaded?"Loading your pantry...":items.length?"No match":"Your pantry is empty"}</h3><p>${!loaded?"":items.length?"Try a different name.":"Add what you have at home and we will suggest recipes."}</p></div>`:
+  if(loadError){renderState($("groups"),"error",loadError,refresh);return}
+  if(!loaded){renderState($("groups"),"loading","Loading your pantry");return}
+  if(!shown.length){renderState($("groups"),"empty",items.length?"No pantry items match your search.":"Your pantry is empty. Add items to get recipe suggestions.");return}
+  $("groups").innerHTML=
   Object.keys(CATS).map(c=>{const g=shown.filter(i=>i.cat===c);if(!g.length)return"";
    return `<section class="cat"><h3><span>${CATS[c]}</span>${c}<small>${g.length}</small></h3><div class="items">${g.map(card).join("")}</div></section>`}).join("");
   $("diets").innerHTML=DIETS.map(d=>`<button class="chip" aria-pressed="${diets.includes(d)}" data-d="${d}">${d}</button>`).join("");
