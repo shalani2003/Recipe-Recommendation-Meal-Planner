@@ -32,6 +32,8 @@ th,td{padding:10px 8px;border-bottom:1px solid var(--line)}
 .ring-label{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
 .ring-label b{font:700 2rem var(--font-h)}
 .thumb{width:48px;height:48px;border-radius:var(--r-md);background:var(--peach-lt);display:grid;place-items:center;font-size:1.6rem;flex:none}
+.thumb{overflow:hidden}
+.list-item .thumb img{width:100%;height:100%;object-fit:cover}
 .list-item{display:flex;gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
 .list-item:last-child{border:0}.list-item .grow{flex:1}
 .cups{display:flex;gap:8px;flex-wrap:wrap}
