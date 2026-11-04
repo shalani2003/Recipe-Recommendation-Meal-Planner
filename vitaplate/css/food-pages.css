@@ -1,5 +1,4 @@
 /* Shared photo-rich healthy food pages */
-:root{--green:#2f813f;--green-dark:#18552e;--green-soft:#eaf5e8;--mint:#f5faf2;--food-line:#dfece0;--food-ink:#193f32}
 body{background:linear-gradient(135deg,#f8fbf6 0%,#fff 52%,#f5faf3 100%)}
 .content{max-width:1500px;width:100%;padding-top:25px}
 .food-hero{position:relative;display:grid;grid-template-columns:1.05fr .95fr;align-items:center;min-height:245px;overflow:hidden;border:1px solid #dcebd8;border-radius:24px;background:linear-gradient(110deg,#f0f8e9 0%,#f8fbf3 52%,#e7f2df 100%);margin-bottom:22px;box-shadow:0 8px 28px #244e2110}
