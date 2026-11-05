@@ -161,7 +161,7 @@
 
     // Meal plan and the recipe catalog are loaded from the backend.
     let plan = {};
-    let recipeCatalog = _l("vp_recipe_catalog", []);
+    let recipeCatalog = [];
     const get = () => plan;
     const recipes = () => [...R, ...recipeCatalog];
     let goal = VP.user.goalKcal;
@@ -209,7 +209,6 @@
             ]);
             const serverRecipes = Array.isArray(catalogResult) ? catalogResult : catalogResult.recipes || [];
             recipeCatalog = [
-                ..._l("vp_recipe_catalog", []),
                 ...serverRecipes.map(recipe => ({
                     ...recipe,
                     id: `api:${recipe.id}`,
@@ -277,9 +276,9 @@
                             <option value="">Choose…</option>
 
                             ${allowed.map(x => `
-                                <option value="${x.id}"
+                                <option value="${VP.escapeHtml(x.id)}"
                                     ${x.id == id ? "selected" : ""}>
-                                    ${x.name}
+                                    ${VP.escapeHtml(x.name)}
                                 </option>
                             `).join("")}
 
