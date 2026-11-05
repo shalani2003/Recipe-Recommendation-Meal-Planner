@@ -282,6 +282,7 @@
 
 			// Shopping state is always loaded from and saved to the Flask API.
 			let S = [];
+			let movingToPantry = false;
 			let dismissedPlan = {signature: "", keys: []};
 			let currentMealPlan = {};
 			const api = async (path, options = {}) => {
@@ -428,10 +429,6 @@
 				// 5. Resolve ingredient images and use a local fallback for failed URLs.
 				const SHOP_IMAGE_FALLBACK = "assets/food/hero-healthy-bowl.jpg";
 				const getImage = item => VPShopping.resolveShoppingImage(item, IMAGE_MAP, SHOP_IMAGE_FALLBACK);
-				const escapeHtml = value => String(value == null ? "" : value).replace(/[&<>"']/g, character => ({
-					"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-				})[character]);
-
 				const status = message => $("shopStatus").textContent = message;
 
 				function draw() {
@@ -449,20 +446,20 @@
 					const sorted = [...S].sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
 					listEl.innerHTML = sorted.map(item => `
 						<div class="shop-card ${item.done ? "done" : ""}">
-							<button type="button" class="custom-check" data-check="${escapeHtml(item.id)}" aria-label="Toggle ${escapeHtml(item.name)}">
+							<button type="button" class="custom-check" data-check="${VP.escapeHtml(item.id)}" aria-label="Toggle ${VP.escapeHtml(item.name)}">
 								<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
 									<polyline points="20 6 9 17 4 12"></polyline>
 								</svg>
 							</button>
 							<div class="item-image">
-								<img src="${escapeHtml(getImage(item))}" alt="${escapeHtml(item.name)}" loading="lazy" data-fallback="${SHOP_IMAGE_FALLBACK}" onerror="this.onerror=null;this.src=this.dataset.fallback">
+								<img src="${VP.escapeHtml(getImage(item))}" alt="${VP.escapeHtml(item.name)}" loading="lazy" data-fallback="${SHOP_IMAGE_FALLBACK}" onerror="this.onerror=null;this.src=this.dataset.fallback">
 							</div>
 							<div class="item-details">
-								<span class="item-name">${escapeHtml(item.name)}</span>
-								${VPShopping.formatQuantity(item) ? `<span class="item-quantity">${VPShopping.formatQuantity(item)}</span>` : ""}
+								<span class="item-name">${VP.escapeHtml(item.name)}</span>
+								${VPShopping.formatQuantity(item) ? `<span class="item-quantity">${VP.escapeHtml(VPShopping.formatQuantity(item))}</span>` : ""}
 								<span class="item-badge">${getCategory(item.name)}</span>
 							</div>
-							<button type="button" class="delete-btn" data-delete="${escapeHtml(item.id)}" aria-label="Remove ${escapeHtml(item.name)}">
+							<button type="button" class="delete-btn" data-delete="${VP.escapeHtml(item.id)}" aria-label="Remove ${VP.escapeHtml(item.name)}">
 								<svg viewBox="0 0 24 24" width="20" height="20" stroke-linecap="round" stroke-linejoin="round">
 									<line x1="18" y1="6" x2="6" y2="18"></line>
 									<line x1="6" y1="6" x2="18" y2="18"></line>
@@ -566,51 +563,69 @@
 				});
 
 				$("mv").addEventListener("click", async () => {
+					if (movingToPantry) return;
 					const boughtItems = S.filter(item => item.done);
 					if (!boughtItems.length) {
-						status("Mark items as bought before moving them to the Pantry.");
+						status("Select items you have bought before moving them to the Pantry.");
 						return;
 					}
 
+					movingToPantry = true;
+					$("mv").disabled = true;
 					let moved = 0;
-					for (const item of boughtItems) {
-						const result = VPShopping.moveBoughtItemsToPantry(
-							[item],
-							[],
-							$("pantryExpiry").value
-						);
-						if (result.error) {
-							status(`Unable to move items to the Pantry: ${result.error}`);
-							return;
+					try {
+						for (const item of boughtItems) {
+							const result = VPShopping.moveBoughtItemsToPantry(
+								[item],
+								[],
+								$("pantryExpiry").value
+							);
+							if (result.error) {
+								status(`Unable to move items to the Pantry: ${result.error}`);
+								return;
+							}
+							const pantryItem = result.pantryItems[0];
+							try {
+								await api(`/api/shopping/${encodeURIComponent(item.id)}/move-to-pantry`, {
+									method: "POST",
+									body: JSON.stringify({
+										category: pantryItem.cat,
+										quantity: pantryItem.qty,
+										unit: pantryItem.unit,
+										expiry_date: pantryItem.exp
+									})
+								});
+								S = S.filter(entry => String(entry.id) !== String(item.id));
+								moved += 1;
+								draw();
+							} catch (error) {
+								status(`Moved ${moved} item${moved === 1 ? "" : "s"}; unable to move ${item.name}: ${error.message}`);
+								return;
+							}
 						}
-						const pantryItem = result.pantryItems[0];
+						let refreshMessage = "";
 						try {
-							await api("/api/pantry", {
-								method: "POST",
-								body: JSON.stringify({
-									name: pantryItem.name,
-									category: pantryItem.cat,
-									quantity: pantryItem.qty,
-									unit: pantryItem.unit,
-									expiry_date: pantryItem.exp
-								})
-							});
-							await api(`/api/shopping/${encodeURIComponent(item.id)}`, {method: "DELETE"});
-							S = S.filter(entry => String(entry.id) !== String(item.id));
-							moved += 1;
-							draw();
+							const pantryResponse = await api("/api/pantry");
+							VP.pantry = pantryResponse.items;
+							VP.pantrySummary = pantryResponse.summary;
+							window.dispatchEvent(new Event("vp-data-ready"));
 						} catch (error) {
-							status(`Moved ${moved} item${moved === 1 ? "" : "s"}; unable to move ${item.name}: ${error.message}`);
-							return;
+							refreshMessage = ` Pantry display could not be refreshed: ${error.message}`;
 						}
+						status(`${moved} bought item${moved === 1 ? "" : "s"} moved to the Pantry.${refreshMessage}`);
+					} finally {
+						movingToPantry = false;
+						$("mv").disabled = false;
 					}
-					status(`${moved} bought item${moved === 1 ? "" : "s"} moved to the Pantry.`);
 				});
 
 				$("clr").addEventListener("click", async () => {
-					if (!confirm("Clear entire shopping list?")) return;
 					try {
-						await api("/api/shopping", {method: "DELETE"});
+						const cleared = await VPShopping.confirmAndClearShoppingList(
+							() => confirm("Clear entire shopping list?"),
+							() => api("/api/shopping", {method: "DELETE"})
+						);
+						if (!cleared) return;
 						S = [];
 						draw();
 						status("Shopping list cleared.");
