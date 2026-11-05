@@ -6,3 +6,4 @@ backend/.pytest_cache/
 backend/vitaplate.db
 backend/secret.key
 backend/uploads/
+*.db
