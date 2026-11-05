@@ -1,11 +1,13 @@
 const assert = require("assert");
 const fs = require("fs");
 const vm = require("vm");
+const pantryCategories = ["Vegetables", "Fruits", "Grains", "Protein", "Dairy", "Spices & sauces", "Other"];
 
 const sourcePath = `${__dirname}\\pantry.js`;
 const source = fs.readFileSync(sourcePath, "utf8").replace("catch{return d}", "catch(error){return d}");
 const context = {
   Date,
+  VP: { pantryCategories },
   document: { addEventListener() {} },
   localStorage: { getItem() { return "[]"; }, setItem() {} }
 };
@@ -67,6 +69,7 @@ const document = {
 };
 const mergeContext = {
   Date,
+  VP: { pantryCategories },
   document,
   window: { addEventListener() {} },
   localStorage: {
@@ -165,6 +168,7 @@ const formDocument = {
 };
 const formContext = {
   Date,
+  VP: { pantryCategories },
   document: formDocument,
   window: { addEventListener() {} },
   localStorage: {
