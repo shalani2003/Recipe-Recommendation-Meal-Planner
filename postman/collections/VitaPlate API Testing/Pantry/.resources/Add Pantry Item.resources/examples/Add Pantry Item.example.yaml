@@ -1,0 +1,55 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/api/pantry"
+  method: POST
+  body:
+    type: json
+    content: "{\r
+
+      \  \"name\": \"Apple\",\r
+
+      \  \"quantity\": 5,\r
+
+      \  \"unit\": \"pcs\",\r
+
+      \  \"category\": \"Fruits\",\r
+
+      \  \"expiry_date\": \"2026-11-10\"\r
+
+      }"
+response:
+  statusCode: 201
+  statusText: CREATED
+  headers:
+    Server: Werkzeug/3.1.9 Python/3.12.10
+    Date: Thu, 05 Nov 2026 13:58:57 GMT
+    Content-Type: application/json
+    Content-Length: "194"
+    X-Content-Type-Options: nosniff
+    X-Frame-Options: DENY
+    Referrer-Policy: same-origin
+    Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'none'
+    Cache-Control: no-store
+    Vary: Cookie
+    Set-Cookie: session=eyJfcGVybWFuZW50Ijp0cnVlLCJ1c2VyX2lkIjoyfQ.auyLoQ.7wASoMgkskBql05SlWrMTZyMcYQ; Expires=Thu, 12 Nov 2026 13:58:57 GMT; HttpOnly; Path=/; SameSite=Lax
+    Connection: close
+  body:
+    type: json
+    content: |-
+      {
+        "item": {
+          "cat": "Fruits",
+          "category": "Fruits",
+          "days_left": 5,
+          "exp": "2026-11-10",
+          "expiry_date": "2026-11-10",
+          "id": 9,
+          "name": "Apple",
+          "qty": 5,
+          "quantity": 5,
+          "state": "ok",
+          "unit": "pcs"
+        },
+        "merged": false
+      }
+order: 1000

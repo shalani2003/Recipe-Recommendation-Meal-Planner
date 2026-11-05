@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{base_url}}/api/ratings"
+method: PUT
+body:
+  type: json
+  content: '{"name": "Chicken Rice", "stars": 4}'
+order: 2000

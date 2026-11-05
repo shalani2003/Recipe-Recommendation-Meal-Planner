@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{base_url}}/api/pantry/9/quantity"
+method: PATCH
+body:
+  type: json
+  content: "{\r\n  \"delta\": 5\r\n}"
+order: 5000

@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{base_url}}/api/settings"
+method: PUT
+body:
+  type: json
+  content: '{"preferences": {"notificationMode": "off"}}'
+order: 1000

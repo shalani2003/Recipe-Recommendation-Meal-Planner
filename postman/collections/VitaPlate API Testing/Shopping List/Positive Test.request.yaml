@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{base_url}}/api/shopping"
+method: POST
+body:
+  type: json
+  content: '{"name": "Milk", "quantity": 2, "unit": "l"}'
+order: 1000
