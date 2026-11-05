@@ -12,4 +12,29 @@ body:
     \  \"password\": \"Test12345\"\r
 
     }"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 201 (Created) or 409 (Duplicate)\", function () {\r
+
+      \    pm.expect(pm.response.code).to.be.oneOf([201, 409]);\r
+
+      });\r
+
+      \r
+
+      if (pm.response.code === 201) {\r
+
+      \    pm.test(\"Response has user and recovery_code\", function () {\r
+
+      \        var jsonData = pm.response.json();\r
+
+      \        pm.expect(jsonData).to.have.property(\"user\");\r
+
+      \        pm.expect(jsonData).to.have.property(\"recovery_code\");\r
+
+      \    });\r
+
+      }"
+    language: text/javascript
+examples: .resources/Register API.resources/examples
 order: 1000

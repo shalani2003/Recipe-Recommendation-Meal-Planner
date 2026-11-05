@@ -4,4 +4,12 @@ method: POST
 body:
   type: json
   content: '{"weight_kg": -5}'
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 400 Bad Request for invalid weight\", function () {\r
+
+      \    pm.response.to.have.status(400);\r
+
+      });"
+    language: text/javascript
 order: 2000

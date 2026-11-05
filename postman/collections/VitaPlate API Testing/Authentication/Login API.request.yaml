@@ -10,4 +10,22 @@ body:
     \  \"password\": \"Test12345\"\r
 
     }"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 200 OK\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r
+
+      \r
+
+      pm.test(\"Response has user data\", function () {\r
+
+      \    var jsonData = pm.response.json();\r
+
+      \    pm.expect(jsonData).to.have.property(\"user\");\r
+
+      });"
+    language: text/javascript
 order: 2000

@@ -1,4 +1,12 @@
 $kind: http-request
 url: "{{base_url}}/api/pantry/9"
 method: DELETE
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 200, 204 or 404\", function () {\r
+
+      \    pm.expect(pm.response.code).to.be.oneOf([200, 204, 404]);\r
+
+      });"
+    language: text/javascript
 order: 6000

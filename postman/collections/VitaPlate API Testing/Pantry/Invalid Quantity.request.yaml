@@ -1,4 +1,27 @@
 $kind: http-request
-url: ""
-method: GET
+url: "{{base_url}}/api/pantry"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"name\": \"Apple\",\r
+
+    \  \"quantity\": -5,\r
+
+    \  \"unit\": \"pcs\",\r
+
+    \  \"category\": \"Fruits\",\r
+
+    \  \"expiry_date\": \"2026-11-10\"\r
+
+    }"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 400 Bad Request\", function () {\r
+
+      \    pm.response.to.have.status(400);\r
+
+      });"
+    language: text/javascript
 order: 8000

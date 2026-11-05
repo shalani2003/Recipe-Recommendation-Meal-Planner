@@ -14,4 +14,18 @@ body:
     \  \"expiry_date\": \"2026-11-10\"\r
 
     }"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 400 Bad Request\", function () {\r
+
+      \    pm.response.to.have.status(400);\r
+
+      });\r
+
+      pm.test(\"Error message is present\", function () {\r
+
+      \    pm.expect(pm.response.json()).to.have.property(\"error\");\r
+
+      });"
+    language: text/javascript
 order: 7000

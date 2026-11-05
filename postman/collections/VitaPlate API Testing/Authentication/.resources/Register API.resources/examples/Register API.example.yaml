@@ -1,0 +1,43 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/api/register"
+  method: POST
+  body:
+    type: json
+    content: "{\r
+
+      \  \"name\": \"QA Tester\",\r
+
+      \  \"email\": \"qatester01@gmail.com\",\r
+
+      \  \"password\": \"Test12345\"\r
+
+      }"
+response:
+  statusCode: 201
+  statusText: CREATED
+  headers:
+    Server: Werkzeug/3.1.9 Python/3.12.10
+    Date: Thu, 05 Nov 2026 13:51:42 GMT
+    Content-Type: application/json
+    Content-Length: "101"
+    X-Content-Type-Options: nosniff
+    X-Frame-Options: DENY
+    Referrer-Policy: same-origin
+    Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'none'
+    Cache-Control: no-store
+    Vary: Cookie
+    Set-Cookie: session=eyJfcGVybWFuZW50Ijp0cnVlLCJ1c2VyX2lkIjoyfQ.auyJ7g.GkLbWuManR2CKiUUCnVUr6JfOWk; Expires=Thu, 12 Nov 2026 13:51:42 GMT; HttpOnly; Path=/; SameSite=Lax
+    Connection: close
+  body:
+    type: json
+    content: |-
+      {
+        "recovery_code": "3NYL-F7Q4-3J4H",
+        "user": {
+          "email": "qatester01@gmail.com",
+          "id": 2,
+          "name": "QA Tester"
+        }
+      }
+order: 1000

@@ -16,5 +16,13 @@ body:
     \  \"expiry_date\": \"2026-11-10\"\r
 
     }"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 201 or 200\", function () {\r
+
+      \    pm.expect(pm.response.code).to.be.oneOf([201, 200]);\r
+
+      });"
+    language: text/javascript
 examples: .resources/Add Pantry Item.resources/examples
 order: 1000

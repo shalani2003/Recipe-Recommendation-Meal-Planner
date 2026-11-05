@@ -1,0 +1,743 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "VitaPlate API Testing",
+    "version": "1.0.0",
+    "description": ""
+  },
+  "servers": [
+    {
+      "url": "{{base_url}}"
+    }
+  ],
+  "paths": {
+    "/api/register": {
+      "post": {
+        "summary": "Register API",
+        "responses": {
+          "201": {
+            "description": "Register API",
+            "headers": {
+              "Server": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Werkzeug/3.1.9 Python/3.12.10"
+              },
+              "Date": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Thu, 05 Nov 2026 13:51:42 GMT"
+              },
+              "Content-Length": {
+                "schema": {
+                  "type": "integer"
+                },
+                "example": 101
+              },
+              "X-Content-Type-Options": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "nosniff"
+              },
+              "X-Frame-Options": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "DENY"
+              },
+              "Referrer-Policy": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "same-origin"
+              },
+              "Content-Security-Policy": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'none'"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "no-store"
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Cookie"
+              },
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "session=eyJfcGVybWFuZW50Ijp0cnVlLCJ1c2VyX2lkIjoyfQ.auyJ7g.GkLbWuManR2CKiUUCnVUr6JfOWk; Expires=Thu, 12 Nov 2026 13:51:42 GMT; HttpOnly; Path=/; SameSite=Lax"
+              },
+              "Connection": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "close"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "recovery_code": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "id": {
+                          "type": "integer"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "recovery_code": "3NYL-F7Q4-3J4H",
+                  "user": {
+                    "email": "qatester01@gmail.com",
+                    "id": 2,
+                    "name": "QA Tester"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Authentication"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "name": "QA Tester",
+                "email": "qatester01@gmail.com",
+                "password": "Test12345"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/login": {
+      "post": {
+        "summary": "Login API",
+        "responses": {},
+        "tags": [
+          "Authentication"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "email": "qatester01@gmail.com",
+                "password": "Test12345"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pantry": {
+      "post": {
+        "summary": "Add Pantry Item",
+        "responses": {
+          "201": {
+            "description": "Add Pantry Item",
+            "headers": {
+              "Server": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Werkzeug/3.1.9 Python/3.12.10"
+              },
+              "Date": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Thu, 05 Nov 2026 13:58:57 GMT"
+              },
+              "Content-Length": {
+                "schema": {
+                  "type": "integer"
+                },
+                "example": 194
+              },
+              "X-Content-Type-Options": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "nosniff"
+              },
+              "X-Frame-Options": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "DENY"
+              },
+              "Referrer-Policy": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "same-origin"
+              },
+              "Content-Security-Policy": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'none'"
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "no-store"
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Cookie"
+              },
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "session=eyJfcGVybWFuZW50Ijp0cnVlLCJ1c2VyX2lkIjoyfQ.auyLoQ.7wASoMgkskBql05SlWrMTZyMcYQ; Expires=Thu, 12 Nov 2026 13:58:57 GMT; HttpOnly; Path=/; SameSite=Lax"
+              },
+              "Connection": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "close"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "item": {
+                      "type": "object",
+                      "properties": {
+                        "cat": {
+                          "type": "string"
+                        },
+                        "category": {
+                          "type": "string"
+                        },
+                        "days_left": {
+                          "type": "integer"
+                        },
+                        "exp": {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        "expiry_date": {
+                          "type": "string",
+                          "format": "date"
+                        },
+                        "id": {
+                          "type": "integer"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "qty": {
+                          "type": "integer"
+                        },
+                        "quantity": {
+                          "type": "integer"
+                        },
+                        "state": {
+                          "type": "string"
+                        },
+                        "unit": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "merged": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "example": {
+                  "item": {
+                    "cat": "Fruits",
+                    "category": "Fruits",
+                    "days_left": 5,
+                    "exp": "2026-11-10",
+                    "expiry_date": "2026-11-10",
+                    "id": 9,
+                    "name": "Apple",
+                    "qty": 5,
+                    "quantity": 5,
+                    "state": "ok",
+                    "unit": "pcs"
+                  },
+                  "merged": false
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Pantry"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "type": "integer"
+                  },
+                  "unit": {
+                    "type": "string"
+                  },
+                  "category": {
+                    "type": "string"
+                  },
+                  "expiry_date": {
+                    "type": "string",
+                    "format": "date"
+                  }
+                }
+              },
+              "example": {
+                "name": "Apple",
+                "quantity": 5,
+                "unit": "pcs",
+                "category": "Fruits",
+                "expiry_date": "2026-11-10"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get All Items",
+        "responses": {},
+        "tags": [
+          "Pantry"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pantry/9": {
+      "get": {
+        "summary": "Get Single Item",
+        "responses": {},
+        "tags": [
+          "Pantry"
+        ]
+      },
+      "put": {
+        "summary": "Update Item (PUT)",
+        "responses": {},
+        "tags": [
+          "Pantry"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "type": "integer"
+                  },
+                  "unit": {
+                    "type": "string"
+                  },
+                  "category": {
+                    "type": "string"
+                  },
+                  "expiry_date": {
+                    "type": "string",
+                    "format": "date"
+                  }
+                }
+              },
+              "example": {
+                "name": "Green Apple",
+                "quantity": 10,
+                "unit": "pcs",
+                "category": "Fruits",
+                "expiry_date": "2026-11-15"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Item",
+        "responses": {},
+        "tags": [
+          "Pantry"
+        ]
+      }
+    },
+    "/api/pantry/9/quantity": {
+      "patch": {
+        "summary": "Update Quantity (PATCH)",
+        "responses": {},
+        "tags": [
+          "Pantry"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "delta": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "delta": 5
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dietary": {
+      "put": {
+        "summary": "Positive Test",
+        "responses": {},
+        "tags": [
+          "Dietary Preferences"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "diets": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "allergies": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "example": {
+                "diets": [
+                  "Vegetarian",
+                  "Vegan"
+                ],
+                "allergies": [
+                  "peanuts"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profile": {
+      "put": {
+        "summary": "Boundary Test",
+        "responses": {},
+        "tags": [
+          "Profile"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "height": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "height": 300
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings": {
+      "put": {
+        "summary": "Positive Test",
+        "responses": {},
+        "tags": [
+          "Settings"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "preferences": {
+                    "type": "object",
+                    "properties": {
+                      "notificationMode": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              "example": {
+                "preferences": {
+                  "notificationMode": "off"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings/password": {
+      "post": {
+        "summary": "Boundary Test (Password)",
+        "responses": {},
+        "tags": [
+          "Settings"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "current_password": {
+                    "type": "string"
+                  },
+                  "new_password": {
+                    "type": "string",
+                    "format": "color"
+                  }
+                }
+              },
+              "example": {
+                "current_password": "Test12345",
+                "new_password": "abc"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/favorites": {
+      "post": {
+        "summary": "Positive Test",
+        "responses": {},
+        "tags": [
+          "Favorites & Meal Planner"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "name": "Chicken Rice"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ratings": {
+      "put": {
+        "summary": "Boundary Test (Ratings)",
+        "responses": {},
+        "tags": [
+          "Favorites & Meal Planner"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "stars": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "name": "Chicken Rice",
+                "stars": 4
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shopping": {
+      "post": {
+        "summary": "Positive Test",
+        "responses": {},
+        "tags": [
+          "Shopping List"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "type": "integer"
+                  },
+                  "unit": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "name": "Milk",
+                "quantity": 2,
+                "unit": "l"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/water": {
+      "put": {
+        "summary": "Boundary Test (Water)",
+        "responses": {},
+        "tags": [
+          "Health Records"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "glasses": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "glasses": 25
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/weight-log": {
+      "post": {
+        "summary": "Boundary Test (Weight)",
+        "responses": {},
+        "tags": [
+          "Health Records"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "weight_kg": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "example": {
+                "weight_kg": -5
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

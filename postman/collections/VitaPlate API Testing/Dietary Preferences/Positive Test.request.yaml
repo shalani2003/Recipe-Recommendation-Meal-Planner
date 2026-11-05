@@ -4,4 +4,12 @@ method: PUT
 body:
   type: json
   content: '{"diets": ["Vegetarian", "Vegan"], "allergies": ["peanuts"]}'
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 200 OK\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });"
+    language: text/javascript
 order: 1000

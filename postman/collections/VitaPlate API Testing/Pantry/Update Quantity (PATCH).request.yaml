@@ -4,4 +4,12 @@ method: PATCH
 body:
   type: json
   content: "{\r\n  \"delta\": 5\r\n}"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 200 or 404\", function () {\r
+
+      \    pm.expect(pm.response.code).to.be.oneOf([200, 404]);\r
+
+      });"
+    language: text/javascript
 order: 5000

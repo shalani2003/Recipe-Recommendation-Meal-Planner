@@ -4,4 +4,12 @@ method: POST
 body:
   type: json
   content: '{"name": "Chicken Rice"}'
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 200 or 201\", function () {\r
+
+      \    pm.expect(pm.response.code).to.be.oneOf([200, 201]);\r
+
+      });"
+    language: text/javascript
 order: 1000

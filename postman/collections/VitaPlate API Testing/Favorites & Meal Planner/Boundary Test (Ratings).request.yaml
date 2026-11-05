@@ -4,4 +4,12 @@ method: PUT
 body:
   type: json
   content: '{"name": "Chicken Rice", "stars": 4}'
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 400 Bad Request for invalid rating\", function () {\r
+
+      \    pm.response.to.have.status(400);\r
+
+      });"
+    language: text/javascript
 order: 2000
