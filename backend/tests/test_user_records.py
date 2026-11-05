@@ -32,6 +32,20 @@ def test_shopping_list_validation_and_login(client, user):
     assert user.put("/api/shopping", json={"items": [{"name": "Rice", "quantity": -1}]}).status_code == 400
 
 
+def test_markup_like_shopping_names_are_preserved_for_safe_text_rendering(user):
+    names = [
+        "<script>alert('test')</script>",
+        "<img src=x onerror=alert(1)>",
+        "<b>Test Name</b>",
+        "Farmer's \"special\" 魚",
+    ]
+    response = user.put("/api/shopping", json={
+        "items": [{"name": name, "quantity": 1, "unit": "pcs"} for name in names],
+    })
+    assert response.status_code == 200
+    assert [item["name"] for item in response.get_json()["items"]] == names
+
+
 def test_shopping_item_crud_duplicate_merge_and_user_isolation(app, client, user, user2):
     assert client.post("/api/shopping", json={"name": "Rice"}).status_code == 401
 
@@ -83,6 +97,83 @@ def test_shopping_item_rejects_bad_expiry_and_supports_clear(app, user):
     user.post("/api/shopping", json={"name": "Milk", "quantity": 2})
     response = user.delete("/api/shopping")
     assert response.get_json() == {"ok": True, "removed": 2}
+
+
+def test_move_bought_shopping_item_is_atomic_and_retry_safe(user):
+    existing = user.post("/api/pantry", json={
+        "name": "Rice", "category": "Grains", "quantity": 1, "unit": "kg",
+        "expiry_date": "2027-02-01",
+    })
+    assert existing.status_code == 201
+    shopping = user.post("/api/shopping", json={
+        "name": "Rice", "quantity": 0.5, "unit": "kg", "done": True,
+    }).get_json()["item"]
+    move_url = f"/api/shopping/{shopping['id']}/move-to-pantry"
+    payload = {
+        "category": "Grains", "quantity": 0.5, "unit": "kg",
+        "expiry_date": "2027-01-01",
+    }
+
+    moved = user.post(move_url, json=payload)
+    assert moved.status_code == 200
+    assert moved.get_json() == {"ok": True, "merged": True, "removed": 1}
+    retry = user.post(move_url, json=payload)
+    assert retry.status_code == 404
+
+    pantry_items = user.get("/api/pantry").get_json()["items"]
+    rice = next(item for item in pantry_items if item["name"].lower() == "rice")
+    assert (rice["quantity"], rice["unit"], rice["category"], rice["expiry_date"]) == (
+        1.5, "kg", "Grains", "2027-01-01",
+    )
+    assert all(item["id"] != shopping["id"] for item in user.get("/api/shopping").get_json()["items"])
+
+
+def test_move_rejects_unbought_or_invalid_pantry_data_without_removing_shopping(user):
+    shopping = user.post("/api/shopping", json={
+        "name": "Rice", "quantity": 1, "unit": "kg", "done": False,
+    }).get_json()["item"]
+    move_url = f"/api/shopping/{shopping['id']}/move-to-pantry"
+    payload = {"category": "Grains", "quantity": 1, "unit": "kg"}
+    assert user.post(move_url, json=payload).status_code == 400
+    user.patch(f"/api/shopping/{shopping['id']}", json={"is_bought": True})
+    assert user.post(move_url, json={**payload, "category": "Invalid"}).status_code == 400
+    assert len(user.get("/api/shopping").get_json()["items"]) == 1
+    assert user.post(move_url, json={**payload, "category": ""}).status_code == 200
+    assert user.get("/api/shopping").get_json()["items"] == []
+
+
+def test_markup_like_shopping_names_move_to_pantry_as_literal_text(user):
+    names = [
+        "<script>alert('test')</script>",
+        "<img src=x onerror=alert(1)>",
+        "<b>Test Name</b>",
+    ]
+    for name in names:
+        shopping = user.post("/api/shopping", json={
+            "name": name, "quantity": 1, "unit": "pcs", "done": True,
+        }).get_json()["item"]
+        response = user.post(
+            f"/api/shopping/{shopping['id']}/move-to-pantry",
+            json={"quantity": 1, "unit": "pcs"},
+        )
+        assert response.status_code == 200
+        pantry = user.get("/api/pantry").get_json()["items"]
+        assert sum(item["name"] == name for item in pantry) == 1
+        assert next(item for item in pantry if item["name"] == name)["category"] == "Other"
+    assert user.get("/api/shopping").get_json()["items"] == []
+
+
+def test_clear_shopping_does_not_clear_pantry(user):
+    user.post("/api/pantry", json={
+        "name": "Rice", "category": "Grains", "quantity": 1, "unit": "kg",
+    })
+    user.post("/api/shopping", json={"name": "Milk"})
+
+    response = user.delete("/api/shopping")
+
+    assert response.get_json() == {"ok": True, "removed": 1}
+    assert user.get("/api/shopping").get_json()["items"] == []
+    assert any(item["name"] == "Rice" for item in user.get("/api/pantry").get_json()["items"])
 
 
 def test_water_is_saved_per_user_and_day(app, user, user2):
