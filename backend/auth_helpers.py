@@ -12,6 +12,7 @@ from flask import current_app, g, jsonify, request, session
 
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 BAD_TEXT_RE = re.compile(r"[<>\x00-\x1f]")
+CONTROL_TEXT_RE = re.compile(r"[\x00-\x1f]")
 
 
 def error(message, status=400):
@@ -28,8 +29,8 @@ def clean_email(value):
     return str(value or "").strip().lower()
 
 
-def clean_text(value, label, min_len=1, max_len=60):
-    """Trim a text value and reject markup characters. Returns (text, problem)."""
+def clean_text(value, label, min_len=1, max_len=60, allow_markup=False):
+    """Trim text, rejecting markup unless allowed and always rejecting controls."""
     if value is None:
         value = ""
     elif not isinstance(value, str):
@@ -39,7 +40,9 @@ def clean_text(value, label, min_len=1, max_len=60):
         return None, "Enter %s" % label
     if len(text) > max_len:
         return None, "%s must be %d characters or fewer" % (label.capitalize(), max_len)
-    if BAD_TEXT_RE.search(text):
+    if CONTROL_TEXT_RE.search(text):
+        return None, "%s cannot contain control characters" % label.capitalize()
+    if not allow_markup and re.search(r"[<>]", text):
         return None, "%s cannot contain < or > characters" % label.capitalize()
     return text, None
 
