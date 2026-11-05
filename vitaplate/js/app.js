@@ -1,6 +1,7 @@
 // Shared app shell: sidebar + top bar, injected on every page
 const THEME_STORAGE_KEY="vp_theme";
-const storedTheme=localStorage.getItem(THEME_STORAGE_KEY);
+const ACTIVE_ACCOUNT_STORAGE_KEY="vp_active_account";
+const storedTheme=VP.safeStorage.getString(THEME_STORAGE_KEY,"light",value=>value==="light"||value==="dark");
 document.documentElement.dataset.theme=storedTheme==="dark"?"dark":"light";
 const NAV=[["index.html","🏠","Dashboard"],["pantry.html","🥕","Pantry"],["recipes.html","📖","Recipes"],["planner.html","📅","Meal planner"],["shopping.html","🛒","Shopping list"],["health.html","⚖️","Health & BMI"],["profile.html","👤","Profile"],["settings.html","⚙️","Settings"]];
 function initializeThemeToggle(){
@@ -19,7 +20,7 @@ function initializeThemeToggle(){
   button.addEventListener("click",()=>{
     const nextTheme=document.documentElement.dataset.theme==="dark"?"light":"dark";
     document.documentElement.dataset.theme=nextTheme;
-    localStorage.setItem(THEME_STORAGE_KEY,nextTheme);
+    VP.safeStorage.setString(THEME_STORAGE_KEY,nextTheme,value=>value==="light"||value==="dark");
     updateButton();
   });
   const topbar=document.querySelector(".topbar");
@@ -69,12 +70,12 @@ function buildShell(){
   document.body.insertAdjacentHTML("afterbegin",`
   <aside class="sidebar" id="sidebar"><button class="pin-btn" id="pinBtn" aria-pressed="false">📌 Pin</button><div class="brand"><img src="assets/logo.jpeg" alt="VitaPlate - Nourish. Plan. Thrive."></div>
   <nav class="nav" aria-label="Main">${links}</nav>
-  <div class="user-card"><div class="avatar" id="shellAvatar"></div><div><a href="settings.html" ${page==="settings.html"?'aria-current="page"':''}><b>${u.name}</b></a><div class="muted" id="shellGoal" style="font-size:.8rem">Goal: ${u.goalKcal} kcal/day</div></div></div><button class="btn btn-ghost btn-sm" id="logout">Log out</button></aside>
+  <div class="user-card"><div class="avatar" id="shellAvatar"></div><div><a href="settings.html" ${page==="settings.html"?'aria-current="page"':''}><b>${VP.escapeHtml(u.name)}</b></a><div class="muted" id="shellGoal" style="font-size:.8rem">Goal: ${u.goalKcal} kcal/day</div></div></div><button class="btn btn-ghost btn-sm" id="logout">Log out</button></aside>
   <div class="scrim" id="scrim"></div>`);
   const main=document.querySelector(".main");
   main.insertAdjacentHTML("afterbegin",`<header class="topbar"><button class="btn btn-ghost btn-sm menu-btn" id="menuBtn" aria-label="Open menu">☰</button><span class="muted" style="margin-left:auto">${title}</span></header>`);
   const pinBtn=document.getElementById("pinBtn");
-  const pinned=_l("vp_nav_pinned",false);
+  const pinned=_l("vp_nav_pinned",false,value=>typeof value==="boolean");
   const updatePin=()=>{document.body.classList.toggle("nav-pinned",pinnedState);pinBtn.setAttribute("aria-pressed",pinnedState);pinBtn.textContent=pinnedState?"📌 Pinned":"📌 Pin"};
   let pinnedState=pinned;
   const toggle=()=>{if(!pinnedState)document.body.classList.toggle("nav-open")};
@@ -85,7 +86,9 @@ function buildShell(){
     try{
       const response=await fetch("/api/logout",{method:"POST",credentials:"same-origin"});
       if(!response.ok)throw new Error("Could not log out. Please try again.");
-      location.href="login.html";
+      resetAccountState();
+      VP.safeStorage.remove(ACTIVE_ACCOUNT_STORAGE_KEY);
+      location.replace("login.html");
     }catch(error){alert(error.message||"Could not log out. Please try again.")}
   };
   updateShellAvatar();
@@ -104,7 +107,12 @@ document.addEventListener("DOMContentLoaded",()=>{
 async function accountRequest(path){
   const response=await fetch(path,{credentials:"same-origin"});
   const data=await response.json().catch(()=>({}));
-  if(response.status===401){location.replace("login.html");return null}
+  if(response.status===401){
+    resetAccountState();
+    VP.safeStorage.remove(ACTIVE_ACCOUNT_STORAGE_KEY);
+    location.replace("login.html");
+    return null
+  }
   if(!response.ok)throw new Error(data.error||"Could not load your account data.");
   return data;
 }
@@ -112,6 +120,9 @@ async function accountRequest(path){
 async function loadAccountData(){
   const current=await accountRequest("/api/me");
   if(!current)return;
+  const accountId=current.user.id;
+  if(VP.accountId!==accountId)resetAccountState(current.user);
+  VP.safeStorage.setString(ACTIVE_ACCOUNT_STORAGE_KEY,String(accountId),value=>/^[1-9]\d*$/.test(value));
   VP.user.name=current.user.name;
   const [profile,settings,pantry,dietary]=await Promise.all([
     accountRequest("/api/profile"),
@@ -120,6 +131,8 @@ async function loadAccountData(){
     accountRequest("/api/dietary")
   ]);
   if(!profile||!settings||!pantry||!dietary)return;
+  const verified=await accountRequest("/api/me");
+  if(!verified||String(verified.user.id)!==String(accountId))return;
   VP.user.goalKcal=profile.calorie_goal||1800;
   VP.user.profilePicture=settings.picture_url||"";
   VP.profile=profile;
@@ -131,6 +144,26 @@ async function loadAccountData(){
   updateShellGoal(VP.user.goalKcal);
   window.dispatchEvent(new Event("vp-data-ready"));
 }
+
+window.addEventListener("storage",event=>{
+  if(event.key!==ACTIVE_ACCOUNT_STORAGE_KEY)return;
+  if(event.newValue!==null&&!/^[1-9]\d*$/.test(event.newValue)){
+    resetAccountState();
+    document.documentElement.style.visibility="hidden";
+    location.replace("login.html");
+    return;
+  }
+  if(event.newValue===String(VP.accountId))return;
+  resetAccountState();
+  document.documentElement.style.visibility="hidden";
+  location.replace("login.html");
+});
+
+window.addEventListener("pageshow",event=>{
+  if(event.persisted&&document.body.dataset.page)loadAccountData().catch(error=>{
+    showAccountError(error.message||"Could not reload your account data.");
+  });
+});
 
 if(document.body.dataset.page){
   VP.ready=loadAccountData().catch(error=>{
