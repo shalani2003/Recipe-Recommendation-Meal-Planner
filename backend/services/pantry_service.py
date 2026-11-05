@@ -70,11 +70,13 @@ def sync_legacy_items(db, user_id):
     )
 
 
-def add_item(db, user_id, name, cat, qty, unit, exp):
+def add_item(db, user_id, name, cat, qty, unit, exp, manage_transaction=True):
     """Add to the pantry. Same name AND same unit (any letter case) -> quantities are added and
     the earlier expiry date is kept. A different unit stays a separate item, so 1 kg is never
-    added to 15 pcs. Returns (row, merged)."""
-    db.execute("BEGIN IMMEDIATE")
+    added to 15 pcs. Returns (row, merged). Set manage_transaction=False when joining a larger
+    transaction managed by the caller."""
+    if manage_transaction:
+        db.execute("BEGIN IMMEDIATE")
     existing = db.execute(
         "SELECT * FROM pantry WHERE user_id = ? AND lower(name) = lower(?) AND unit = ?",
         (user_id, name, unit),
@@ -92,7 +94,8 @@ def add_item(db, user_id, name, cat, qty, unit, exp):
         )
         item_id, merged = cur.lastrowid, False
     sync_legacy_items(db, user_id)
-    db.commit()
+    if manage_transaction:
+        db.commit()
     return db.execute("SELECT * FROM pantry WHERE id = ?", (item_id,)).fetchone(), merged
 
 
