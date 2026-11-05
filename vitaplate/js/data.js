@@ -1,14 +1,119 @@
 // Shared sample catalog and helpers; account state is hydrated from the API.
-const _l=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch{return d}};
-const _s=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const isRecord=value=>value!==null&&typeof value==="object"&&!Array.isArray(value);
+const isStringArray=value=>Array.isArray(value)&&value.every(item=>typeof item==="string");
+const isFiniteNumber=value=>typeof value==="number"&&Number.isFinite(value);
+const isPantryStorage=value=>Array.isArray(value)&&value.every(item=>
+  isRecord(item)&&typeof item.name==="string"&&item.name.trim().length>0&&
+  (item.category===undefined||typeof item.category==="string")&&
+  (item.quantity===undefined||isFiniteNumber(item.quantity))&&
+  (item.qty===undefined||isFiniteNumber(item.qty))&&
+  (item.unit===undefined||typeof item.unit==="string")
+);
+const isShoppingStorage=value=>Array.isArray(value)&&value.every(item=>
+  isRecord(item)&&typeof item.name==="string"&&item.name.trim().length>0&&
+  (item.done===undefined||typeof item.done==="boolean")&&
+  (item.quantity===undefined||item.quantity===null||isFiniteNumber(item.quantity))&&
+  (item.unit===undefined||item.unit===null||typeof item.unit==="string")
+);
+const STORAGE_DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const STORAGE_MEALS=["Breakfast","Lunch","Dinner"];
+const isMealPlanStorage=value=>isRecord(value)&&Object.keys(value).every(day=>
+  STORAGE_DAYS.includes(day)&&isRecord(value[day])&&Object.keys(value[day]).every(meal=>
+    STORAGE_MEALS.includes(meal)&&
+    (typeof value[day][meal]==="string"||isFiniteNumber(value[day][meal]))
+  )
+);
+const isRatingsStorage=value=>isRecord(value)&&Object.keys(value).every(name=>
+  isFiniteNumber(value[name])&&value[name]>=0&&value[name]<=5
+);
+const safeStorage={
+  getJSON(key,fallback,validate){
+    try{
+      const raw=localStorage.getItem(key);
+      if(raw===null)return fallback;
+      const value=JSON.parse(raw);
+      return typeof validate==="function"&&!validate(value)?fallback:value;
+    }catch(error){return fallback}
+  },
+  setJSON(key,value,validate){
+    try{
+      if(typeof validate==="function"&&!validate(value))return false;
+      const serialized=JSON.stringify(value);
+      if(serialized===undefined)return false;
+      localStorage.setItem(key,serialized);
+      return true;
+    }catch(error){return false}
+  },
+  getString(key,fallback,validate){
+    try{
+      const value=localStorage.getItem(key);
+      return typeof value==="string"&&(!validate||validate(value))?value:fallback;
+    }catch(error){return fallback}
+  },
+  setString(key,value,validate){
+    try{
+      if(typeof value!=="string"||(validate&&!validate(value)))return false;
+      localStorage.setItem(key,value);
+      return true;
+    }catch(error){return false}
+  },
+  remove(key){
+    try{localStorage.removeItem(key);return true}catch(error){return false}
+  }
+};
+const _l=(k,d,validate)=>safeStorage.getJSON(k,d,validate);
+const _s=(k,v,validate)=>safeStorage.setJSON(k,v,validate);
 const HEALTH_LIMITS={height:{min:100,max:230},weight:{min:25,max:250},bmi:{min:18.5,max:40}};
+const PANTRY_CATEGORIES=["Vegetables","Fruits","Grains","Protein","Dairy","Spices & sauces","Other"];
+const normalizePantryCategory=value=>{
+  if(typeof value!=="string")return "";
+  return PANTRY_CATEGORIES.find(category=>category.toLowerCase()===value.trim().toLowerCase())||"";
+};
+const escapeHtml=value=>String(value==null?"":value).replace(/[&<>"']/g,character=>({
+  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+})[character]);
 window.VP={
   user:{name:"Friend",goalKcal:1800,profilePicture:"",macros:{protein:[62,90],carbs:[140,210],fat:[38,60]}},
+  accountId:null,
   pantry:[],
+  pantryCategories:PANTRY_CATEGORIES,
+  normalizePantryCategory,
+  escapeHtml,
+  safeStorage,
+  storageValidators:{
+    isRecord,
+    isStringArray,
+    isPantryStorage,
+    isShoppingStorage,
+    isMealPlanStorage,
+    isRatingsStorage
+  },
   diets:[],
   today:[{meal:"Breakfast",name:"Coconut roti & pol sambol",emoji:"🥥",kcal:420},{meal:"Lunch",name:"Rice, dhal & gotukola sallad",emoji:"🍛",kcal:610},{meal:"Snack",name:"Banana & peanuts",emoji:"🍌",kcal:180}],
   picks:[{name:"Chicken & broccoli bowl",emoji:"🥦",match:92,kcal:480},{name:"Pumpkin curry",emoji:"🎃",match:85,kcal:390},{name:"Egg fried rice",emoji:"🍳",match:78,kcal:520}]
 };
+function resetAccountState(user){
+  VP.accountId=user&&user.id!==undefined?user.id:null;
+  VP.user={
+    name:user&&user.name||"Friend",
+    goalKcal:1800,
+    profilePicture:"",
+    macros:{protein:[62,90],carbs:[140,210],fat:[38,60]}
+  };
+  VP.pantry=[];
+  VP.diets=[];
+  VP.today=[
+    {meal:"Breakfast",name:"Coconut roti & pol sambol",emoji:"🥥",kcal:420},
+    {meal:"Lunch",name:"Rice, dhal & gotukola sallad",emoji:"🍛",kcal:610},
+    {meal:"Snack",name:"Banana & peanuts",emoji:"🍌",kcal:180}
+  ];
+  VP.picks=[
+    {name:"Chicken & broccoli bowl",emoji:"🥦",match:92,kcal:480},
+    {name:"Pumpkin curry",emoji:"🎃",match:85,kcal:390},
+    {name:"Egg fried rice",emoji:"🍳",match:78,kcal:520}
+  ];
+  ["profile","dietary","pantrySummary","apiError"].forEach(key=>delete VP[key]);
+}
 const V="Vegetarian",VG="Vegan",GF="Gluten-free",DF="Dairy-free",H="Halal";
 const R=[
  {id:1,name:"Chicken & broccoli bowl",kind:"broccoli",time:25,kcal:480,p:38,c:40,f:16,diets:[H,DF,GF],ing:["Chicken","Broccoli","Rice"]},
