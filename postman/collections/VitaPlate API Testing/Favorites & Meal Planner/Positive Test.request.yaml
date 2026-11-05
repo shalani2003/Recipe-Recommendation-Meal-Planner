@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{base_url}}/api/favorites"
+method: POST
+body:
+  type: json
+  content: '{"name": "Chicken Rice"}'
+order: 1000

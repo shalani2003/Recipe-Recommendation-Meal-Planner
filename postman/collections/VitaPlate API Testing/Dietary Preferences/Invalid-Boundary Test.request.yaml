@@ -1,0 +1,8 @@
+$kind: http-request
+name: Invalid/Boundary Test
+url: "{{base_url}}/api/dietary"
+method: PUT
+body:
+  type: json
+  content: '{"diets": ["InvalidDietName"]}'
+order: 2000

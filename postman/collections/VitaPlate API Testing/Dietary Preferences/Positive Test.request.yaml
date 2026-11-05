@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{base_url}}/api/dietary"
+method: PUT
+body:
+  type: json
+  content: '{"diets": ["Vegetarian", "Vegan"], "allergies": ["peanuts"]}'
+order: 1000

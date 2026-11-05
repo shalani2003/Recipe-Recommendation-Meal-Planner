@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{base_url}}/api/profile"
+method: PUT
+body:
+  type: json
+  content: '{"height": 300}'
+order: 1000

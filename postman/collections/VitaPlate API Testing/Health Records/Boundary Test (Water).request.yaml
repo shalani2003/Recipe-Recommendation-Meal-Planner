@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{base_url}}/api/water"
+method: PUT
+body:
+  type: json
+  content: '{"glasses": 25}'
+order: 1000

@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{base_url}}/api/weight-log"
+method: POST
+body:
+  type: json
+  content: '{"weight_kg": -5}'
+order: 2000

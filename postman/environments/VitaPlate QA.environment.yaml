@@ -1,0 +1,4 @@
+name: VitaPlate QA
+values:
+  - key: base_url
+    value: ''

@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{base_url}}/api/pantry"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"name\": \"Apple\",\r
+
+    \  \"quantity\": 5,\r
+
+    \  \"unit\": \"pcs\",\r
+
+    \  \"category\": \"Fruits\",\r
+
+    \  \"expiry_date\": \"2026-11-10\"\r
+
+    }"
+examples: .resources/Add Pantry Item.resources/examples
+order: 1000
