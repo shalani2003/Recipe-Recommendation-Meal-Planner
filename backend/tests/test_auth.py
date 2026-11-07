@@ -5,11 +5,14 @@ def test_register_login_me_logout(app):
     c, data = make_user(app)
     assert data["user"]["email"] == "nimal@example.com"
     assert len(data["recovery_code"]) == 14  # XXXX-XXXX-XXXX
+    assert "password" not in data and "password_hash" not in data["user"]
     assert c.get("/api/me").get_json()["user"]["name"] == "Nimal"
     c.post("/api/logout")
     assert c.get("/api/me").status_code == 401
     r = c.post("/api/login", json={"email": "NIMAL@example.com ", "password": "secret123"})
     assert r.status_code == 200
+    assert "secret123" not in r.get_data(as_text=True)
+    assert "password_hash" not in r.get_json()["user"]
 
 
 def test_register_validation(client):
@@ -18,10 +21,16 @@ def test_register_validation(client):
            ({"name": "Al", "email": "nope", "password": "secret123"}, 400),
            ({"name": "Al", "email": "a@b.co", "password": "short1"}, 400),
            ({"name": "Al", "email": "a@b.co", "password": {"value": "secret123"}}, 400),
-           ({"name": "Al", "email": "a@b.co", "password": "nodigitshere"}, 400),
-           ({"name": "<script>alert(1)</script>", "email": "a@b.co", "password": "secret123"}, 400)]
+           ({"name": "Al", "email": "a@b.co", "password": "nodigitshere"}, 400)]
     for payload, status in bad:
         assert client.post("/api/register", json=payload).status_code == status, payload
+    response = client.post("/api/register", json={
+        "name": "<script>alert('test')</script>",
+        "email": "script@example.com",
+        "password": "secret123",
+    })
+    assert response.status_code == 201
+    assert response.get_json()["user"]["name"] == "<script>alert('test')</script>"
 
 
 def test_duplicate_email_case_insensitive(app):
@@ -51,8 +60,54 @@ def test_passwords_are_hashed(app):
     make_user(app)
     import sqlite3
     row = sqlite3.connect(app.config["DB_PATH"]).execute("SELECT password_hash, recovery_hash FROM users").fetchone()
-    assert "secret123" not in row[0] and row[0].startswith(("scrypt:", "pbkdf2:"))
-    assert row[1] and row[1].startswith(("scrypt:", "pbkdf2:"))
+    assert "secret123" not in row[0] and row[0].startswith("$argon2id$")
+    assert row[1] and row[1].startswith("$argon2id$")
+
+
+def test_registration_stops_if_secure_hashing_fails(app, monkeypatch):
+    from routes import auth
+    from services.passwords import PasswordHashError
+
+    def fail_hashing(_secret):
+        raise PasswordHashError
+
+    monkeypatch.setattr(auth, "hash_password", fail_hashing)
+    client = app.test_client()
+    response = client.post("/api/register", json={
+        "name": "Nimal", "email": "nimal@example.com", "password": "secret123",
+    })
+
+    assert response.status_code == 503
+    assert response.get_json() == {
+        "error": "Unable to securely process your password. Please try again later."
+    }
+    assert "secret123" not in response.get_data(as_text=True)
+    assert client.post("/api/login", json={
+        "email": "nimal@example.com", "password": "secret123",
+    }).status_code == 401
+
+
+def test_legacy_password_hashes_remain_login_compatible(app):
+    from werkzeug.security import generate_password_hash
+    from db import get_db
+
+    client = app.test_client()
+    with app.app_context():
+        db = get_db()
+        db.execute(
+            "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+            ("Legacy User", "legacy@example.com", generate_password_hash(
+                "legacy123", method="scrypt:32768:8:1"
+            )),
+        )
+        db.commit()
+
+    assert client.post("/api/login", json={
+        "email": "legacy@example.com", "password": "legacy123",
+    }).status_code == 200
+    assert client.post("/api/login", json={
+        "email": "legacy@example.com", "password": "wrong123",
+    }).status_code == 401
 
 
 def test_reset_needs_recovery_code(app):
@@ -77,6 +132,59 @@ def test_reset_needs_recovery_code(app):
     assert other.post("/api/login", json={"email": "nimal@example.com", "password": "newpass123"}).status_code == 200
     assert other.post("/api/login", json={"email": "nimal@example.com", "password": "secret123"}).status_code == 401
     assert other.post("/api/forgot-password", json={"email": "nimal@example.com", "recovery_code": code}).status_code == 400
+
+
+def test_reset_token_expires(app, monkeypatch):
+    import time
+    from itsdangerous.timed import TimestampSigner
+    from routes import auth
+
+    client, data = make_user(app)
+    original_timestamp = TimestampSigner.get_timestamp
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            TimestampSigner,
+            "get_timestamp",
+            lambda signer: int(time.time()) - auth.RESET_TOKEN_SECONDS - 1,
+        )
+        token_response = client.post("/api/forgot-password", json={
+            "email": "nimal@example.com",
+            "recovery_code": data["recovery_code"],
+        })
+    assert token_response.status_code == 200
+
+    expired = client.post("/api/reset-password", json={
+        "token": token_response.get_json()["reset_token"],
+        "password": "newpass123",
+    })
+    assert expired.status_code == 400
+    assert expired.get_json() == {
+        "error": "This reset link is not valid or has expired. Start again."
+    }
+    assert client.post("/api/login", json={
+        "email": "nimal@example.com", "password": "secret123",
+    }).status_code == 200
+    assert TimestampSigner.get_timestamp is original_timestamp
+
+
+def test_reset_without_ownership_proof_does_not_change_password(app):
+    client, _ = make_user(app)
+    no_token = client.post("/api/reset-password", json={
+        "email": "nimal@example.com", "password": "newpass123",
+    })
+    bad_code = client.post("/api/forgot-password", json={
+        "email": "nimal@example.com", "recovery_code": "AAAA-AAAA-AAAA",
+    })
+    unknown_account = client.post("/api/forgot-password", json={
+        "email": "ghost@example.com", "recovery_code": "AAAA-AAAA-AAAA",
+    })
+
+    assert no_token.status_code == 400
+    assert bad_code.status_code == unknown_account.status_code == 400
+    assert bad_code.get_json() == unknown_account.get_json()
+    assert client.post("/api/login", json={
+        "email": "nimal@example.com", "password": "secret123",
+    }).status_code == 200
 
 
 def test_reset_token_rejects_garbage_and_weak_password(app):

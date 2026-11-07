@@ -193,6 +193,18 @@
       return false;
     };
 
+    const apiPlanRecipes = () => apiRecipes.map(recipe => ({
+      ...recipe,
+      id: `api:${recipe.id}`,
+      ing: recipe.ingredients || recipe.ing || [],
+      kcal: recipe.kcal || 0,
+      p: recipe.protein || recipe.p || 0,
+      c: recipe.carbs || recipe.c || 0,
+      f: recipe.fat || recipe.f || 0,
+      time: recipe.time || recipe.time_min || 0,
+      diets: recipe.diets || []
+    }));
+
     function draw() {
       const q = $("q").value.toLowerCase();
 
@@ -233,12 +245,12 @@
         return `
           <article class="rcard">
             <div class="recipe-photo-wrap">
-              <img class="recipe-photo" src="${photoUrl}" alt="Healthy ${r.name}" loading="lazy">
+              <img class="recipe-photo" src="${photoUrl}" alt="Healthy ${VP.escapeHtml(r.name)}" loading="lazy">
               <span class="photo-label">🌿 Nourishing pick</span>
               <button class="heart" data-f="${r.id}" aria-pressed="${isFav}" aria-label="Favourite">${isFav ? "❤️" : "🤍"}</button>
             </div>
             <div class="recipe-card-body">
-              <h3>${r.name}</h3>
+              <h3>${VP.escapeHtml(r.name)}</h3>
               <div class="meta">
                 <span class="chip">${matchPct(r)}% in pantry</span>
                 <span class="chip warn">${r.kcal} kcal</span>
@@ -303,7 +315,7 @@
           return;
         }
       } else if (d.plan) {
-        const recipe = [...R, ..._l("vp_recipe_catalog", [])]
+        const recipe = [...R, ...apiPlanRecipes()]
           .find(item => String(item.id) === String(d.plan));
         let added = false;
         try {
@@ -319,7 +331,7 @@
           e.target.textContent = "Plan full";
         }
       } else if (d.shop) {
-        const r = [...R, ..._l("vp_recipe_catalog", [])]
+        const r = [...R, ...apiPlanRecipes()]
           .find(item => String(item.id) === String(d.shop));
         if (!r) return;
         const pantry = pantryIngredients(r);
@@ -402,22 +414,7 @@
 
       matches.forEach(recipe => {
         const pantry = getApiPantryMatch(recipe);
-        const planRecipe = {
-          ...recipe,
-          id: `api:${recipe.id}`,
-          ing: recipe.ingredients || recipe.ing || [],
-          kcal: recipe.kcal || 0,
-          p: recipe.p || 0,
-          c: recipe.c || 0,
-          f: recipe.f || 0,
-          time: recipe.time || 0,
-          diets: recipe.diets || []
-        };
-        const planCatalog = _l("vp_recipe_catalog", []);
-        if (!planCatalog.some(item => String(item.id) === String(planRecipe.id))) {
-          planCatalog.push(planRecipe);
-          _s("vp_recipe_catalog", planCatalog);
-        }
+        const planRecipe = apiPlanRecipes().find(item => String(item.id) === `api:${recipe.id}`);
         const card = document.createElement("article");
         card.className = "rcard";
 

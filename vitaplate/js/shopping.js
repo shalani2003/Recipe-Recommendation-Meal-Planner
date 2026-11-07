@@ -370,7 +370,19 @@
 		return items.splice(index, 1)[0];
 	}
 
-	function pantryCategory(name) {
+	function confirmAndClearShoppingList(confirmClear, clearRequest) {
+		if (!confirmClear()) return Promise.resolve(false);
+		return Promise.resolve().then(clearRequest).then(() => true);
+	}
+
+	function validPantryCategory(value) {
+		return global.VP.normalizePantryCategory(value);
+	}
+
+	function pantryCategory(name, preferredCategory) {
+		const preferred = validPantryCategory(preferredCategory);
+		if (preferred) return preferred;
+
 		const item = normalizeName(name);
 		if (/chicken|beef|pork|meat|fish|salmon|tuna|egg|prawn|maldive|dhal|lentil|gram|bean/.test(item)) return "Protein";
 		if (/milk|cheese|yogurt|dairy|butter|cream|curd/.test(item)) return "Dairy";
@@ -446,12 +458,15 @@
 			const converted = pantryQuantity(rawQuantity, shoppingItem.unit || "pcs");
 			if (converted.error) return { error: `${shoppingItem.name}: ${converted.error}` };
 
-			const category = pantryCategory(shoppingItem.name);
+			const category = pantryCategory(
+				shoppingItem.name,
+				validPantryCategory(shoppingItem.category) || shoppingItem.cat
+			) || "Other";
+			const itemExpiry = shoppingItem.expiry_date || shoppingItem.exp || expiryDate || "";
+			if (!validExpiryDate(itemExpiry)) return { error: `${shoppingItem.name}: Enter a valid expiry date.` };
 			const existing = nextPantry.find(item =>
 				String(item.name || "").trim().toLowerCase() === String(shoppingItem.name || "").trim().toLowerCase() &&
-				item.cat === category &&
-				String(item.unit || "").trim().toLowerCase() === converted.unit &&
-				(item.exp || "") === expiryDate
+				String(item.unit || "").trim().toLowerCase() === converted.unit
 			);
 			if (existing) {
 				const amount = Number(existing.qty) + converted.amount;
@@ -461,6 +476,8 @@
 					return { error: `${shoppingItem.name}: combined quantity exceeds Pantry limits.` };
 				}
 				existing.qty = amount;
+				existing.cat = validPantryCategory(existing.cat || existing.category) || category;
+				if (!existing.exp || (itemExpiry && itemExpiry < existing.exp)) existing.exp = itemExpiry;
 				if (existing.shoppingIds.indexOf(itemId) === -1) existing.shoppingIds.push(itemId);
 			} else {
 				nextPantry.push({
@@ -469,7 +486,7 @@
 					cat: category,
 					qty: converted.amount,
 					unit: converted.unit,
-					exp: expiryDate,
+					exp: itemExpiry,
 					shoppingIds: [itemId]
 				});
 			}
@@ -489,6 +506,7 @@
 		ingredientKey,
 		toggleBoughtItem,
 		removeShoppingItem,
+		confirmAndClearShoppingList,
 		moveBoughtItemsToPantry
 	};
 })(window);

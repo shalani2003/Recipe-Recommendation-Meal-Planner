@@ -3,6 +3,7 @@ const fs = require("fs");
 const vm = require("vm");
 
 const storage = new Map();
+const pantryCategoryNames = ["Vegetables", "Fruits", "Grains", "Protein", "Dairy", "Spices & sauces", "Other"];
 const context = {
   Date,
   Math,
@@ -22,7 +23,15 @@ const context = {
     getItem(key) { return storage.has(key) ? storage.get(key) : null; },
     setItem(key, value) { storage.set(key, String(value)); }
   },
-  window: {}
+  window: {
+    VP: {
+      pantryCategories: pantryCategoryNames,
+      normalizePantryCategory(value) {
+        if (typeof value !== "string") return "";
+        return pantryCategoryNames.find(category => category.toLowerCase() === value.trim().toLowerCase()) || "";
+      }
+    }
+  }
 };
 
 const shoppingPath = `${__dirname}\\shopping.js`;
@@ -287,6 +296,28 @@ const removedItem = context.window.VPShopping.removeShoppingItem(interactiveItem
 assert.strictEqual(removedItem, boughtItem);
 assert.deepStrictEqual(interactiveItems, [unrelatedItem]);
 
+function testClearConfirmation() {
+  const confirmAndClear = context.window.VPShopping.confirmAndClearShoppingList;
+  const preservedItems = [{ id: "keep", name: "Rice" }];
+  let clearRequests = 0;
+  return confirmAndClear(
+    () => false,
+    () => { clearRequests += 1; preservedItems.splice(0); return Promise.resolve(); }
+  ).then(cancelled => {
+    assert.strictEqual(cancelled, false);
+    assert.strictEqual(clearRequests, 0);
+    assert.strictEqual(preservedItems.length, 1);
+    return confirmAndClear(
+    () => true,
+    () => { clearRequests += 1; preservedItems.splice(0); return Promise.resolve(); }
+    );
+  }).then(confirmed => {
+    assert.strictEqual(confirmed, true);
+    assert.strictEqual(clearRequests, 1);
+    assert.strictEqual(preservedItems.length, 0);
+  });
+}
+
 const excludedPlanItems = context.window.VPShopping.buildFromMealPlan(
   { Mon: { Lunch: "quantity:301" } },
   quantityRecipes,
@@ -335,6 +366,30 @@ assert.deepStrictEqual(
   [["Coconut", "Fruits", 2, "pcs", ""]]
 );
 
+const categorizedTransfers = moveBought([
+  { id: "valid-category", name: "Eggs", category: " dairy ", quantity: 1, unit: "pcs", done: true, expiry_date: "2027-02-01" },
+  { id: "category-alias", name: "Tea", cat: "Spices & sauces", quantity: 1, unit: "cups", done: true },
+  { id: "invalid-category", name: "Spinach", category: "Not a Pantry category", quantity: 2, unit: "pcs", done: true },
+  { id: "missing-category", name: "Rice", quantity: 1, unit: "kg", done: true }
+], [], "2027-03-01");
+assert.ifError(categorizedTransfers.error);
+assert(categorizedTransfers.pantryItems.every(item => pantryCategoryNames.includes(item.cat)));
+assert.deepStrictEqual(
+  JSON.parse(JSON.stringify(categorizedTransfers.pantryItems.map(item => [item.name, item.cat, item.exp]))),
+  [["Eggs", "Dairy", "2027-02-01"], ["Tea", "Spices & sauces", "2027-03-01"], ["Spinach", "Vegetables", "2027-03-01"], ["Rice", "Grains", "2027-03-01"]]
+);
+
+const mergeDifferentExpiry = moveBought(
+  [{ id: "second-rice-purchase", name: "Rice", category: "Other", quantity: 500, unit: "g", done: true, expiry_date: "2027-01-01" }],
+  [{ id: "existing-rice", name: "Rice", cat: "Grains", qty: 1000, unit: "g", exp: "2027-02-01" }],
+  "2027-03-01"
+);
+assert.ifError(mergeDifferentExpiry.error);
+assert.deepStrictEqual(
+  JSON.parse(JSON.stringify(mergeDifferentExpiry.pantryItems.map(item => [item.name, item.cat, item.qty, item.exp]))),
+  [["Rice", "Grains", 1500, "2027-01-01"]]
+);
+
 const convertedPantryTransfer = moveBought(
   [{ id: "purchased-spice", name: "Cinnamon", quantity: 2, unit: "tsp", done: true }],
   [],
@@ -362,6 +417,15 @@ assert(partialFailure.error);
 assert.strictEqual(partialFailure.pantryItems, undefined);
 assert.strictEqual(partialFailure.movedIds, undefined);
 assert(moveBought([{ id: "bought-exp", name: "Rice", quantity: 1, unit: "kg", done: true }], [], "2026-02-30").error);
-assert(moveBought([{ id: "no-bought", name: "Rice", quantity: 1, unit: "kg", done: false }], []).error);
+const noSelectedItems = [{ id: "no-bought", name: "Rice", quantity: 1, unit: "kg", done: false }];
+const noSelectedTransfer = moveBought(noSelectedItems, []);
+assert.strictEqual(noSelectedTransfer.error, "Mark items as bought before moving them to the Pantry.");
+assert.strictEqual(noSelectedItems.length, 1);
+assert.strictEqual(noSelectedTransfer.pantryItems, undefined);
 
-console.log("PASS plan/pantry generation and manual item validation, quantities, units, and normalization");
+testClearConfirmation().then(() => {
+  console.log("PASS shopping generation, transfer validation, and Clear confirmation behavior");
+}).catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});

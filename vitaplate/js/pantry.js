@@ -1,10 +1,13 @@
 // Pantry page, connected to the backend (/api/pantry, /api/dietary).
-const CATS={Vegetables:"🥕",Fruits:"🍎",Grains:"🌾",Protein:"🍗",Dairy:"🥛","Spices & sauces":"🌶️",Other:"🥫"};
+const CATEGORY_ICONS={Vegetables:"🥕",Fruits:"🍎",Grains:"🌾",Protein:"🍗",Dairy:"🥛","Spices & sauces":"🌶️",Other:"🥫"};
+const CATS=VP.pantryCategories.reduce((categories,category)=>{
+  categories[category]=CATEGORY_ICONS[category];
+  return categories;
+},{});
 const QUICK=[["Rice","Grains"],["Dhal","Grains"],["Coconut","Fruits"],["Eggs","Protein"],["Onion","Vegetables"],["Tomato","Vegetables"],["Chicken","Protein"],["Curry powder","Spices & sauces"]];
 const DIETS=["Vegetarian","Vegan","Gluten-free","Dairy-free","Nut-free","Halal","Low sugar"];
 const MAX_QUANTITY=100000;
 const $=id=>document.getElementById(id);
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let items=[],diets=[],summary={items:0,use_soon:0,expired:0},loaded=false,loadError="";
 
 const localToday=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
@@ -64,8 +67,8 @@ function card(i){
   const n=i.name.toLowerCase();
   const photo=(/chicken|egg|fish|salmon|protein/.test(n))?"assets/food/chicken-quinoa.jpg":(/tomato|avocado|fruit|banana|apple|vegetable|broccoli|carrot|onion|salad/.test(n))?"assets/food/salad-bowl.jpg":(/dhal|lentil|rice|grain|coconut|milk|dairy|soup/.test(n))?"assets/food/lentil-soup.jpg":"assets/food/hero-healthy-bowl.jpg";
   const t=d===null?"No expiry date":d<0?"Expired "+(-d)+" day(s) ago":d===0?"Expires today":d<=3?"Expires in "+d+" day(s)":"Fresh for "+d+" days";
-  return `<article class="item ${s}"><div class="item-top"><img class="pantry-item-photo" src="${photo}" alt="${esc(i.name)}" loading="lazy"><b>${esc(i.name)}</b><button class="rm" data-ed="${i.id}" aria-label="Edit ${esc(i.name)}">✎</button><button class="rm" data-rm="${i.id}" aria-label="Remove ${esc(i.name)}">✕</button></div>
- <div class="qty"><button data-m="${i.id}" aria-label="Less">−</button><span>${i.qty} ${esc(i.unit)}</span><button data-p="${i.id}" aria-label="More">+</button></div><span class="tag ${s}">${t}</span></article>`;
+  return `<article class="item ${s}"><div class="item-top"><img class="pantry-item-photo" src="${photo}" alt="${VP.escapeHtml(i.name)}" loading="lazy"><b>${VP.escapeHtml(i.name)}</b><button class="rm" data-ed="${i.id}" aria-label="Edit ${VP.escapeHtml(i.name)}">✎</button><button class="rm" data-rm="${i.id}" aria-label="Remove ${VP.escapeHtml(i.name)}">✕</button></div>
+ <div class="qty"><button data-m="${i.id}" aria-label="Less">−</button><span>${i.qty} ${VP.escapeHtml(i.unit)}</span><button data-p="${i.id}" aria-label="More">+</button></div><span class="tag ${s}">${t}</span></article>`;
 }
 async function add(name,cat,qty=1,unit="pcs",exp=""){
   if(!name.trim()){toast("Enter an item name.");return false}
@@ -111,5 +114,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   };
   $("filter").oninput=render;
   $("clear").onclick=async()=>{if(confirm("Remove all pantry items?")){const r=await call("/api/pantry","DELETE");if(!r.ok)toast(r.data.error||"Could not clear the pantry.");await refresh()}};
+  window.addEventListener("pageshow",event=>{if(event.persisted)refresh()});
   render();refresh();
 });

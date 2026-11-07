@@ -12,7 +12,7 @@
 							
 								.hero-premium {
 								background: linear-gradient(90deg, rgba(21, 74, 34, 0.95) 0%, rgba(21, 74, 34, 0.4) 100%),
-								url('https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=1200&auto=format&fit=crop') center/cover no-repeat;
+								url('assets/food/hero-healthy-bowl.jpg') center/cover no-repeat;
 								min-height: 200px;
 								border-radius: 24px;
 								box-shadow: 0 10px 30px rgba(21, 74, 34, 0.15);
@@ -210,7 +210,7 @@
 								text-align: center; padding: 60px 20px;
 								background: #fff; border-radius: 24px; border: 2px dashed #dcebd8;
 								}
-								.empty-state img { width: 120px; opacity: 0.8; margin-bottom: 20px; }
+								.empty-state-icon { width: 120px; height: 120px; opacity: 0.8; margin-bottom: 20px; }
 
 								@media (max-width: 768px) {
 								.action-bar { flex-wrap: wrap; }
@@ -282,6 +282,7 @@
 
 			// Shopping state is always loaded from and saved to the Flask API.
 			let S = [];
+			let movingToPantry = false;
 			let dismissedPlan = {signature: "", keys: []};
 			let currentMealPlan = {};
 			const api = async (path, options = {}) => {
@@ -342,76 +343,76 @@
 			$("grocery-suggestions").innerHTML = sriLankanGroceries.map(item => `<option value="${item}">
 				`).join('');
 
-				// 3. Exact Image Dictionary (Highly Reliable 100% Working HD Real Photos)
+				// 3. Local ingredient images
 				const IMAGE_MAP = {
 				// Carbs & Grains
-				"samba rice": "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=150&h=150&fit=crop",
-				"nadu rice": "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=150&h=150&fit=crop",
-				"red raw rice": "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=150&h=150&fit=crop",
-				"red dhal": "https://static.wixstatic.com/media/40fd63_d2409f915d194a13b505c2e48e9513eb~mv2.jpg",
-				"green gram": "https://images.unsplash.com/photo-1600189261867-30e5ffe7b8da?w=150&h=150&fit=crop",
-				"chickpeas": "https://images.unsplash.com/photo-1600189261867-30e5ffe7b8da?w=150&h=150&fit=crop",
-				"bread": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=150&h=150&fit=crop",
-				"oats": "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?w=150&h=150&fit=crop",
-				"pasta": "https://images.unsplash.com/photo-1551462147-37885acc36f1?w=150&h=150&fit=crop",
-				"kurakkan flour": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=150&h=150&fit=crop",
-				"wheat flour": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=150&h=150&fit=crop",
-				"flour": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=150&h=150&fit=crop",
+				"samba rice": "assets/food/vegetable-rice.jpeg",
+				"nadu rice": "assets/food/vegetable-rice.jpeg",
+				"red raw rice": "assets/food/vegetable-rice.jpeg",
+				"red dhal": "assets/food/lentil-soup.jpg",
+				"green gram": "assets/food/lentil-soup.jpg",
+				"chickpeas": "assets/food/api-chickpea-salad.jpg",
+				"bread": "assets/food/avocado-toast.jpg",
+				"oats": "assets/food/lentil-soup.jpg",
+				"pasta": "assets/food/vegetable-rice.jpeg",
+				"kurakkan flour": "assets/food/polroti.jpg",
+				"wheat flour": "assets/food/polroti.jpg",
+				"flour": "assets/food/polroti.jpg",
 
 				// Veggies & Fruits
-				"coconut": "https://images.unsplash.com/photo-1526318896980-cf78c088247c?w=150&h=150&fit=crop",
-				"onion": "https://images.unsplash.com/photo-1508747703725-719777637510?w=150&h=150&fit=crop",
-				"big onion": "https://images.unsplash.com/photo-1508747703725-719777637510?w=150&h=150&fit=crop",
-				"garlic": "https://images.unsplash.com/photo-1540148426945-6cf22a6b2383?w=150&h=150&fit=crop",
-				"ginger": "https://images.unsplash.com/photo-1599909533730-9259a6f88e74?w=150&h=150&fit=crop",
-				"potato": "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=150&h=150&fit=crop",
-				"carrot": "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=150&h=150&fit=crop",
-				"tomato": "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150&h=150&fit=crop",
-				"brinjal": "https://images.unsplash.com/photo-1528825871115-3581a5387919?w=150&h=150&fit=crop",
-				"pumpkin": "https://images.unsplash.com/photo-1506918565525-1cc9ebf25a5f?w=150&h=150&fit=crop",
-				"snake gourd": "https://images.unsplash.com/photo-1590779033100-9f60a05a013d?w=150&h=150&fit=crop",
-				"okra": "https://images.unsplash.com/photo-1628603576885-2a834185d3b7?w=150&h=150&fit=crop",
-				"green beans": "https://images.unsplash.com/photo-1567375698348-5d9d5ae99de0?w=150&h=150&fit=crop",
+				"coconut": "assets/food/hero-healthy-bowl.jpg",
+				"onion": "assets/food/vegetable-rice.jpeg",
+				"big onion": "assets/food/vegetable-rice.jpeg",
+				"garlic": "assets/food/vegetable-rice.jpeg",
+				"ginger": "assets/food/vegetable-rice.jpeg",
+				"potato": "assets/food/pumpkin.jpg",
+				"carrot": "assets/food/carrot.jpg",
+				"tomato": "assets/food/eggandtomato.jpg",
+				"brinjal": "assets/food/vegetable-rice.jpeg",
+				"pumpkin": "assets/food/pumpkin.jpg",
+				"snake gourd": "assets/food/salad-bowl.jpg",
+				"okra": "assets/food/salad-bowl.jpg",
+				"green beans": "assets/food/salad-bowl.jpg",
 				"broccoli": "/assets/food/chickenandbrocoli.jpg",
-				"cabbage": "https://images.unsplash.com/photo-1550147760-44c9966d6bc7?w=150&h=150&fit=crop",
-				"gotukola": "https://images.unsplash.com/photo-1590779033100-9f60a05a013d?w=150&h=150&fit=crop",
-				"mukunuwenna": "https://images.unsplash.com/photo-1590779033100-9f60a05a013d?w=150&h=150&fit=crop",
-				"spinach": "https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=150&h=150&fit=crop",
-				"banana": "https://images.unsplash.com/photo-1571501679680-de32f1e7aad4?w=150&h=150&fit=crop",
-				"papaya": "https://images.unsplash.com/photo-1517282009859-f000ec3b26fe?w=150&h=150&fit=crop",
-				"mango": "https://images.unsplash.com/photo-1553279768-865429fa0078?w=150&h=150&fit=crop",
-				"pineapple": "https://images.unsplash.com/photo-1550258987-190a2d41a8ba?w=150&h=150&fit=crop",
-				"lime": "https://images.unsplash.com/photo-1590502593747-42a996133562?w=150&h=150&fit=crop",
-				"avocado": "https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=150&h=150&fit=crop",
-				"apple": "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=150&h=150&fit=crop",
+				"cabbage": "assets/food/salad-bowl.jpg",
+				"gotukola": "assets/food/salad-bowl.jpg",
+				"mukunuwenna": "assets/food/salad-bowl.jpg",
+				"spinach": "assets/food/api-spinach-omelette.jpg",
+				"banana": "assets/food/hero-healthy-bowl.jpg",
+				"papaya": "assets/food/hero-healthy-bowl.jpg",
+				"mango": "assets/food/api-mango-yogurt.jpg",
+				"pineapple": "assets/food/hero-healthy-bowl.jpg",
+				"lime": "assets/food/salad-bowl.jpg",
+				"avocado": "assets/food/avocado.jpg",
+				"apple": "assets/food/hero-healthy-bowl.jpg",
 
 				// Meats & Dairy
-				"chicken": "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=150&h=150&fit=crop",
-				"fish": "https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=150&h=150&fit=crop",
-				"maldive fish": "https://images.unsplash.com/photo-1534043464124-3be32fe000c9?w=150&h=150&fit=crop",
-				"prawns": "https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=150&h=150&fit=crop",
-				"eggs": "https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=150&h=150&fit=crop",
-				"milk": "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=150&h=150&fit=crop",
-				"milk powder": "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=150&h=150&fit=crop",
-				"curd": "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=150&h=150&fit=crop",
-				"butter": "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=150&h=150&fit=crop",
-				"cheese": "https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=150&h=150&fit=crop",
+				"chicken": "assets/food/chicken-quinoa.jpg",
+				"fish": "assets/food/baked-salmon.jpg",
+				"maldive fish": "assets/food/baked-salmon.jpg",
+				"prawns": "assets/food/baked-salmon.jpg",
+				"eggs": "assets/food/Eggrice.jpg",
+				"milk": "assets/food/api-mango-yogurt.jpg",
+				"milk powder": "assets/food/api-mango-yogurt.jpg",
+				"curd": "assets/food/api-mango-yogurt.jpg",
+				"butter": "assets/food/avocado-toast.jpg",
+				"cheese": "assets/food/avocado-toast.jpg",
 
 				// Spices & Others
-				"chili powder": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=150&h=150&fit=crop",
-				"turmeric": "https://images.unsplash.com/photo-1615485291234-9d6942d7d5a0?w=150&h=150&fit=crop",
-				"roasted curry powder": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=150&h=150&fit=crop",
-				"curry powder": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=150&h=150&fit=crop",
-				"black pepper": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=150&h=150&fit=crop",
-				"cinnamon": "https://images.unsplash.com/photo-1509358271058-acd22cc93898?w=150&h=150&fit=crop",
-				"cardamom": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=150&h=150&fit=crop",
-				"cloves": "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=150&h=150&fit=crop",
-				"coconut oil": "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=150&h=150&fit=crop",
-				"soy sauce": "https://images.unsplash.com/photo-1589564282621-9323653935d5?w=150&h=150&fit=crop",
-				"sugar": "https://images.unsplash.com/photo-1581441363689-1f3c3c414635?w=150&h=150&fit=crop",
-				"salt": "https://images.unsplash.com/photo-1615486171448-4fd6360ee1d4?w=150&h=150&fit=crop",
-				"tea": "https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?w=150&h=150&fit=crop",
-				"coffee": "https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=150&h=150&fit=crop"
+				"chili powder": "assets/food/lentil-soup.jpg",
+				"turmeric": "assets/food/lentil-soup.jpg",
+				"roasted curry powder": "assets/food/lentil-soup.jpg",
+				"curry powder": "assets/food/lentil-soup.jpg",
+				"black pepper": "assets/food/lentil-soup.jpg",
+				"cinnamon": "assets/food/lentil-soup.jpg",
+				"cardamom": "assets/food/lentil-soup.jpg",
+				"cloves": "assets/food/lentil-soup.jpg",
+				"coconut oil": "assets/food/hero-healthy-bowl.jpg",
+				"soy sauce": "assets/food/vegetable-rice.jpeg",
+				"sugar": "assets/food/api-mango-yogurt.jpg",
+				"salt": "assets/food/lentil-soup.jpg",
+				"tea": "assets/food/hero-healthy-bowl.jpg",
+				"coffee": "assets/food/hero-healthy-bowl.jpg"
 				};
 
 				// 4. Category Mapping
@@ -428,10 +429,6 @@
 				// 5. Resolve ingredient images and use a local fallback for failed URLs.
 				const SHOP_IMAGE_FALLBACK = "assets/food/hero-healthy-bowl.jpg";
 				const getImage = item => VPShopping.resolveShoppingImage(item, IMAGE_MAP, SHOP_IMAGE_FALLBACK);
-				const escapeHtml = value => String(value == null ? "" : value).replace(/[&<>"']/g, character => ({
-					"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-				})[character]);
-
 				const status = message => $("shopStatus").textContent = message;
 
 				function draw() {
@@ -439,7 +436,11 @@
 					if (!S.length) {
 						listEl.innerHTML = `
 							<div class="empty-state">
-								<img src="https://cdn-icons-png.flaticon.com/512/11329/11329060.png" alt="Empty cart">
+								<svg class="empty-state-icon" viewBox="0 0 120 120" role="img" aria-label="Empty cart" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+									<path d="M22 30h12l10 48h44l12-36H38"></path>
+									<circle cx="52" cy="94" r="5"></circle>
+									<circle cx="82" cy="94" r="5"></circle>
+								</svg>
 								<h3 style="color: #1d4638; font-size: 1.4rem;">Your list is empty</h3>
 								<p class="muted" style="margin-top: 8px;">Use the search box above to add items.</p>
 							</div>`;
@@ -449,20 +450,20 @@
 					const sorted = [...S].sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
 					listEl.innerHTML = sorted.map(item => `
 						<div class="shop-card ${item.done ? "done" : ""}">
-							<button type="button" class="custom-check" data-check="${escapeHtml(item.id)}" aria-label="Toggle ${escapeHtml(item.name)}">
+							<button type="button" class="custom-check" data-check="${VP.escapeHtml(item.id)}" aria-label="Toggle ${VP.escapeHtml(item.name)}">
 								<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
 									<polyline points="20 6 9 17 4 12"></polyline>
 								</svg>
 							</button>
 							<div class="item-image">
-								<img src="${escapeHtml(getImage(item))}" alt="${escapeHtml(item.name)}" loading="lazy" data-fallback="${SHOP_IMAGE_FALLBACK}" onerror="this.onerror=null;this.src=this.dataset.fallback">
+								<img src="${VP.escapeHtml(getImage(item))}" alt="${VP.escapeHtml(item.name)}" loading="lazy" data-fallback="${SHOP_IMAGE_FALLBACK}" onerror="this.onerror=null;this.src=this.dataset.fallback">
 							</div>
 							<div class="item-details">
-								<span class="item-name">${escapeHtml(item.name)}</span>
-								${VPShopping.formatQuantity(item) ? `<span class="item-quantity">${VPShopping.formatQuantity(item)}</span>` : ""}
+								<span class="item-name">${VP.escapeHtml(item.name)}</span>
+								${VPShopping.formatQuantity(item) ? `<span class="item-quantity">${VP.escapeHtml(VPShopping.formatQuantity(item))}</span>` : ""}
 								<span class="item-badge">${getCategory(item.name)}</span>
 							</div>
-							<button type="button" class="delete-btn" data-delete="${escapeHtml(item.id)}" aria-label="Remove ${escapeHtml(item.name)}">
+							<button type="button" class="delete-btn" data-delete="${VP.escapeHtml(item.id)}" aria-label="Remove ${VP.escapeHtml(item.name)}">
 								<svg viewBox="0 0 24 24" width="20" height="20" stroke-linecap="round" stroke-linejoin="round">
 									<line x1="18" y1="6" x2="6" y2="18"></line>
 									<line x1="6" y1="6" x2="18" y2="18"></line>
@@ -566,51 +567,69 @@
 				});
 
 				$("mv").addEventListener("click", async () => {
+					if (movingToPantry) return;
 					const boughtItems = S.filter(item => item.done);
 					if (!boughtItems.length) {
-						status("Mark items as bought before moving them to the Pantry.");
+						status("Select items you have bought before moving them to the Pantry.");
 						return;
 					}
 
+					movingToPantry = true;
+					$("mv").disabled = true;
 					let moved = 0;
-					for (const item of boughtItems) {
-						const result = VPShopping.moveBoughtItemsToPantry(
-							[item],
-							[],
-							$("pantryExpiry").value
-						);
-						if (result.error) {
-							status(`Unable to move items to the Pantry: ${result.error}`);
-							return;
+					try {
+						for (const item of boughtItems) {
+							const result = VPShopping.moveBoughtItemsToPantry(
+								[item],
+								[],
+								$("pantryExpiry").value
+							);
+							if (result.error) {
+								status(`Unable to move items to the Pantry: ${result.error}`);
+								return;
+							}
+							const pantryItem = result.pantryItems[0];
+							try {
+								await api(`/api/shopping/${encodeURIComponent(item.id)}/move-to-pantry`, {
+									method: "POST",
+									body: JSON.stringify({
+										category: pantryItem.cat,
+										quantity: pantryItem.qty,
+										unit: pantryItem.unit,
+										expiry_date: pantryItem.exp
+									})
+								});
+								S = S.filter(entry => String(entry.id) !== String(item.id));
+								moved += 1;
+								draw();
+							} catch (error) {
+								status(`Moved ${moved} item${moved === 1 ? "" : "s"}; unable to move ${item.name}: ${error.message}`);
+								return;
+							}
 						}
-						const pantryItem = result.pantryItems[0];
+						let refreshMessage = "";
 						try {
-							await api("/api/pantry", {
-								method: "POST",
-								body: JSON.stringify({
-									name: pantryItem.name,
-									category: pantryItem.cat,
-									quantity: pantryItem.qty,
-									unit: pantryItem.unit,
-									expiry_date: pantryItem.exp
-								})
-							});
-							await api(`/api/shopping/${encodeURIComponent(item.id)}`, {method: "DELETE"});
-							S = S.filter(entry => String(entry.id) !== String(item.id));
-							moved += 1;
-							draw();
+							const pantryResponse = await api("/api/pantry");
+							VP.pantry = pantryResponse.items;
+							VP.pantrySummary = pantryResponse.summary;
+							window.dispatchEvent(new Event("vp-data-ready"));
 						} catch (error) {
-							status(`Moved ${moved} item${moved === 1 ? "" : "s"}; unable to move ${item.name}: ${error.message}`);
-							return;
+							refreshMessage = ` Pantry display could not be refreshed: ${error.message}`;
 						}
+						status(`${moved} bought item${moved === 1 ? "" : "s"} moved to the Pantry.${refreshMessage}`);
+					} finally {
+						movingToPantry = false;
+						$("mv").disabled = false;
 					}
-					status(`${moved} bought item${moved === 1 ? "" : "s"} moved to the Pantry.`);
 				});
 
 				$("clr").addEventListener("click", async () => {
-					if (!confirm("Clear entire shopping list?")) return;
 					try {
-						await api("/api/shopping", {method: "DELETE"});
+						const cleared = await VPShopping.confirmAndClearShoppingList(
+							() => confirm("Clear entire shopping list?"),
+							() => api("/api/shopping", {method: "DELETE"})
+						);
+						if (!cleared) return;
 						S = [];
 						draw();
 						status("Shopping list cleared.");

@@ -4,12 +4,12 @@ import os
 import secrets
 
 from flask import Blueprint, current_app, g, jsonify, request, send_from_directory
-from werkzeug.security import check_password_hash, generate_password_hash
 
 from auth_helpers import (EMAIL_RE, body, clean_email, clean_text, error, login_required,
                           password_problem, rate_limited)
 from db import USER_DATA_TABLES, get_db
 from routes.auth import new_recovery_code, norm_code
+from services.passwords import PasswordHashError, hash_password, verify_password
 
 bp = Blueprint("settings", __name__, url_prefix="/api")
 
@@ -56,7 +56,7 @@ def put_settings():
     name, email = user["name"], user["email"]
 
     if "name" in data:
-        name, problem = clean_text(data["name"], "your name", 2, 60)
+        name, problem = clean_text(data["name"], "your name", 2, 60, allow_markup=True)
         if problem:
             return error(problem)
     if "email" in data:
@@ -106,14 +106,18 @@ def change_password():
     new_pw = data.get("new_password")
     if not isinstance(current_password, str) or not isinstance(new_pw, str):
         return error("Enter your current and new password")
-    if not check_password_hash(user["password_hash"], current_password):
+    if not verify_password(user["password_hash"], current_password):
         return error("Your current password is incorrect.", 403)
     problem = password_problem(new_pw)
     if problem:
         return error(problem)
     if new_pw == str(data.get("current_password")):
         return error("Choose a password different from the current one")
-    db.execute("UPDATE users SET password_hash = ? WHERE id = ?", (generate_password_hash(new_pw), g.user_id))
+    try:
+        password_hash = hash_password(new_pw)
+    except PasswordHashError:
+        return error("Unable to securely process your password. Please try again later.", 503)
+    db.execute("UPDATE users SET password_hash = ? WHERE id = ?", (password_hash, g.user_id))
     db.commit()
     return jsonify({"ok": True})
 
@@ -128,10 +132,14 @@ def new_code():
     db = get_db()
     user = db.execute("SELECT * FROM users WHERE id = ?", (g.user_id,)).fetchone()
     password = data.get("password")
-    if not isinstance(password, str) or not check_password_hash(user["password_hash"], password):
+    if not isinstance(password, str) or not verify_password(user["password_hash"], password):
         return error("Your password is incorrect.", 403)
     code = new_recovery_code()
-    db.execute("UPDATE users SET recovery_hash = ? WHERE id = ?", (generate_password_hash(norm_code(code)), g.user_id))
+    try:
+        recovery_hash = hash_password(norm_code(code))
+    except PasswordHashError:
+        return error("Unable to securely process your recovery code. Please try again later.", 503)
+    db.execute("UPDATE users SET recovery_hash = ? WHERE id = ?", (recovery_hash, g.user_id))
     db.commit()
     return jsonify({"recovery_code": code})
 

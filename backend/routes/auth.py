@@ -3,11 +3,11 @@ import secrets
 
 from flask import Blueprint, current_app, jsonify, request, session
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
-from werkzeug.security import check_password_hash, generate_password_hash
 
 from auth_helpers import (EMAIL_RE, body, clean_email, clean_text, error,
                           login_required, password_problem, rate_limited)
 from db import get_db, seed_new_user
+from services.passwords import PasswordHashError, hash_password, verify_password
 
 bp = Blueprint("auth", __name__, url_prefix="/api")
 
@@ -43,7 +43,7 @@ def register():
     data = body()
     if not isinstance(data, dict):
         return error("Registration details must be a JSON object")
-    name, problem = clean_text(data.get("name"), "your name", 2, 60)
+    name, problem = clean_text(data.get("name"), "your name", 2, 60, allow_markup=True)
     if problem:
         return error(problem)
     email = clean_email(data.get("email"))
@@ -59,9 +59,14 @@ def register():
         return error("An account with this email already exists. Try logging in.", 409)
 
     code = new_recovery_code()
+    try:
+        password_hash = hash_password(pw)
+        recovery_hash = hash_password(norm_code(code))
+    except PasswordHashError:
+        return error("Unable to securely process your password. Please try again later.", 503)
     cur = db.execute(
         "INSERT INTO users (name, email, password_hash, recovery_hash) VALUES (?,?,?,?)",
-        (name, email, generate_password_hash(pw), generate_password_hash(norm_code(code))),
+        (name, email, password_hash, recovery_hash),
     )
     seed_new_user(db, cur.lastrowid)
     db.commit()
@@ -86,7 +91,7 @@ def login():
         return error("Too many attempts. Wait a few minutes and try again.", 429)
 
     row = get_db().execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-    if row is None or not check_password_hash(row["password_hash"], pw):
+    if row is None or not verify_password(row["password_hash"], pw):
         return error("Email or password is incorrect.", 401)
     login_user(row)
     return jsonify({"user": public_user(row)})
@@ -125,10 +130,14 @@ def forgot_password():
         return error("Too many attempts. Wait a few minutes and try again.", 429)
 
     row = get_db().execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-    if row is None or not row["recovery_hash"] or not check_password_hash(row["recovery_hash"], code):
+    if row is None or not row["recovery_hash"] or not verify_password(row["recovery_hash"], code):
         return generic
     # The token is tied to the current password hash, so it works only once.
-    token = serializer().dumps({"uid": row["id"], "fp": row["password_hash"][-16:]})
+    token = serializer().dumps({
+        "uid": row["id"],
+        "fp": row["password_hash"][-16:],
+        "nonce": secrets.token_urlsafe(32),
+    })
     return jsonify({"reset_token": token, "expires_in": RESET_TOKEN_SECONDS})
 
 
@@ -154,10 +163,15 @@ def reset_password():
         return bad_token
 
     code = new_recovery_code()  # the old code is replaced after every reset
+    try:
+        password_hash = hash_password(pw)
+        recovery_hash = hash_password(norm_code(code))
+    except PasswordHashError:
+        return error("Unable to securely process your password. Please try again later.", 503)
     updated = db.execute(
         "UPDATE users SET password_hash = ?, recovery_hash = ? "
         "WHERE id = ? AND password_hash = ?",
-        (generate_password_hash(pw), generate_password_hash(norm_code(code)),
+        (password_hash, recovery_hash,
          row["id"], row["password_hash"]),
     )
     if updated.rowcount != 1:

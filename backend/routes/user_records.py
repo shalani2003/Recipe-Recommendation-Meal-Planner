@@ -6,6 +6,7 @@ from flask import Blueprint, g, jsonify, request
 
 from auth_helpers import body, clean_text, error, login_required
 from db import get_db
+from services import pantry_service as ps
 
 bp = Blueprint("user_records", __name__, url_prefix="/api")
 MAX_SHOPPING_ITEMS = 500
@@ -53,7 +54,7 @@ def shopping_item(data):
     if not isinstance(data, dict):
         return None, "Each shopping item must be an object"
     name, problem = clean_text(
-        data.get("name", data.get("item_name")), "an item name", 1, 120
+        data.get("name", data.get("item_name")), "an item name", 1, 120, allow_markup=True
     )
     if problem:
         return None, problem
@@ -260,6 +261,58 @@ def delete_shopping_item(item_id):
         return error("Item not found", 404)
     db.commit()
     return jsonify({"ok": True, "removed": 1})
+
+
+@bp.post("/shopping/<int:item_id>/move-to-pantry")
+@login_required
+def move_shopping_item_to_pantry(item_id):
+    data = body()
+    if not isinstance(data, dict):
+        return error("Pantry item must be a JSON object")
+
+    db = get_db()
+    db.execute("BEGIN IMMEDIATE")
+    shopping_item = db.execute(
+        "SELECT * FROM shopping_items WHERE id = ? AND user_id = ?",
+        (item_id, g.user_id),
+    ).fetchone()
+    if shopping_item is None:
+        db.rollback()
+        return error("Shopping item was not found or has already been moved", 404)
+    if not shopping_item["bought"]:
+        db.rollback()
+        return error("Mark the shopping item as bought before moving it to the Pantry")
+
+    name, problem = clean_text(
+        shopping_item["name"], "an item name", 1, 60, allow_markup=True
+    )
+    if problem:
+        db.rollback()
+        return error(problem)
+    try:
+        quantity = ps.parse_qty(data.get("quantity", data.get("qty")))
+        unit = ps.parse_unit(data.get("unit"))
+        category = ps.parse_category(data.get("category") or "Other")
+        expiry = ps.parse_expiry(
+            data.get("expiry_date") or shopping_item["expiry_date"]
+        )
+    except ValueError as exc:
+        db.rollback()
+        return error(str(exc))
+
+    _, merged = ps.add_item(
+        db, g.user_id, name, category, quantity, unit, expiry,
+        manage_transaction=False,
+    )
+    deleted = db.execute(
+        "DELETE FROM shopping_items WHERE id = ? AND user_id = ?",
+        (item_id, g.user_id),
+    )
+    if deleted.rowcount != 1:
+        db.rollback()
+        return error("Shopping item could not be moved", 409)
+    db.commit()
+    return jsonify({"ok": True, "merged": merged, "removed": 1})
 
 
 @bp.delete("/shopping")
