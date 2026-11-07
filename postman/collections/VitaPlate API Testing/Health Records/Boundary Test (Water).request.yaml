@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{base_url}}/api/water"
+method: PUT
+body:
+  type: json
+  content: '{"glasses": 25}'
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 400 Bad Request for invalid water count\", function () {\r
+
+      \    pm.response.to.have.status(400);\r
+
+      });"
+    language: text/javascript
+order: 1000

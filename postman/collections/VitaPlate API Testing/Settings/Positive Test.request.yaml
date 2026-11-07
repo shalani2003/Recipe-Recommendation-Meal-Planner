@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{base_url}}/api/settings"
+method: PUT
+body:
+  type: json
+  content: '{"preferences": {"notificationMode": "off"}}'
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 200 OK\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });"
+    language: text/javascript
+order: 1000

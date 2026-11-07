@@ -1,0 +1,8 @@
+workspace:
+  id: c31f7ded-6580-49ec-8751-86916a27216d
+localResources:
+  specs:
+    - ../postman/specs/VitaPlate API Testing/VitaPlate API Testing.json
+resourceNameMappings:
+  specs:
+    - ../postman/specs/VitaPlate API Testing/VitaPlate API Testing.json: VitaPlate API Testing

@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{base_url}}/api/profile"
+method: PUT
+body:
+  type: json
+  content: '{"height": 300}'
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 400 Bad Request for invalid height\", function () {\r
+
+      \    pm.response.to.have.status(400);\r
+
+      });"
+    language: text/javascript
+order: 1000

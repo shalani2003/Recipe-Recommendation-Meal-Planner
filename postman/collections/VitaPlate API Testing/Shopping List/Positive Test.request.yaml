@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{base_url}}/api/shopping"
+method: POST
+body:
+  type: json
+  content: '{"name": "Milk", "quantity": 2, "unit": "l"}'
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 200 or 201\", function () {\r
+
+      \    pm.expect(pm.response.code).to.be.oneOf([200, 201]);\r
+
+      });"
+    language: text/javascript
+order: 1000

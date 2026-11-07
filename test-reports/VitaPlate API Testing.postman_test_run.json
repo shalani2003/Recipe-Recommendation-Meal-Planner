@@ -1,0 +1,84 @@
+{
+	"id": "6aecc7af1c26dd7c0b16a389",
+	"name": "VitaPlate API Testing",
+	"timestamp": "2026-11-05T18:15:19.507Z",
+	"collection_id": "d0AF2F91Cfa87815B0aa17D2",
+	"folder_id": 0,
+	"environment_id": "61e86d67-ed2f-4f17-ba8c-0b6fc86dc327",
+	"totalPass": 22,
+	"delay": 0,
+	"persist": true,
+	"status": "finished",
+	"startedAt": "2026-11-05T18:15:11.704Z",
+	"totalFail": 3,
+	"results": [],
+	"count": 1,
+	"totalTime": 0,
+	"collection": {
+		"requests": [
+			{
+				"id": "34CebC79ACbe101DaD5F8Df1"
+			},
+			{
+				"id": "C9aF7bB9fDf89EF5D9c0AaCA"
+			},
+			{
+				"id": "4AeC67fcafeea95864aBE93D"
+			},
+			{
+				"id": "E4876246477Feedd1799CE67"
+			},
+			{
+				"id": "AD2D115bFaC730e3C6914FfE"
+			},
+			{
+				"id": "B9eb4116eCCF00c2D6bc6A03"
+			},
+			{
+				"id": "87e20E50c6ee7feeaCfbbE2E"
+			},
+			{
+				"id": "aBD50Cb9c7efF84D15d7E018"
+			},
+			{
+				"id": "bA7dFB0Ec89cd78A8d6e67cC"
+			},
+			{
+				"id": "1feD08efDc7bdB8C75CdceD3"
+			},
+			{
+				"id": "fdf6c6DDa5a1fC781BeC6dd0"
+			},
+			{
+				"id": "f0eF54ADDB2adCbfbfEdCA1a"
+			},
+			{
+				"id": "F53eC12A67EfB5AbCf25f3be"
+			},
+			{
+				"id": "6c1E3c0af6a82fFAb04d0Da3"
+			},
+			{
+				"id": "Aa19d2ea9bfc0bE1e1aEBba3"
+			},
+			{
+				"id": "22d23a50AefBBD772299D622"
+			},
+			{
+				"id": "ebA15ECeCDaA7d76bEE0F463"
+			},
+			{
+				"id": "5cfbeeADbDEE73ECbfeA185e"
+			},
+			{
+				"id": "5eBe9A5C2BB4d1d18d99F863"
+			},
+			{
+				"id": "EBF046E1DD277bA438ADedCD"
+			},
+			{
+				"id": "FbA7b47f431cA91413cCe6BE"
+			}
+		]
+	}
+}

@@ -1,0 +1,27 @@
+$kind: http-request
+url: "{{base_url}}/api/pantry/9"
+method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \  \"name\": \"Green Apple\",\r
+
+    \  \"quantity\": 10,\r
+
+    \  \"unit\": \"pcs\",\r
+
+    \  \"category\": \"Fruits\",\r
+
+    \  \"expiry_date\": \"2026-11-15\"\r
+
+    }"
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 200 or 404\", function () {\r
+
+      \    pm.expect(pm.response.code).to.be.oneOf([200, 404]);\r
+
+      });"
+    language: text/javascript
+order: 4000

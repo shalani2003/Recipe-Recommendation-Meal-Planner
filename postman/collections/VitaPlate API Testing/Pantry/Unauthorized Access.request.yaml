@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{base_url}}/api/pantry"
+method: GET
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 401 Unauthorized\", function () {\r
+
+      \    pm.response.to.have.status(401);\r
+
+      });"
+    language: text/javascript
+order: 9000

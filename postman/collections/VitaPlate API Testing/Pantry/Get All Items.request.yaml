@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{base_url}}/api/pantry"
+method: GET
+body:
+  type: json
+  content: ""
+scripts:
+  - type: afterResponse
+    code: "pm.test(\"Status code is 200 OK\", function () {\r
+
+      \    pm.response.to.have.status(200);\r
+
+      });\r
+
+      pm.test(\"Response has items array\", function () {\r
+
+      \    pm.expect(pm.response.json()).to.have.property(\"items\");\r
+
+      });"
+    language: text/javascript
+order: 2000
