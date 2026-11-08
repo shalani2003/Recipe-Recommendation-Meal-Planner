@@ -284,6 +284,7 @@
 			let S = [];
 			let movingToPantry = false;
 			let dismissedPlan = {signature: "", keys: []};
+			let dismissedPlanStorageKey = "";
 			let currentMealPlan = {};
 			const api = async (path, options = {}) => {
 				const headers = new Headers(options.headers || {});
@@ -319,12 +320,29 @@
 				});
 				return selection;
 			}, []).join("|");
+			const persistDismissedPlan = () => {
+				if (!dismissedPlanStorageKey) return false;
+				return VP.safeStorage.setJSON(dismissedPlanStorageKey, dismissedPlan, value =>
+					value && typeof value.signature === "string" &&
+					Array.isArray(value.keys) && value.keys.every(key => typeof key === "string")
+				);
+			};
 			const dismissedForPlan = plan => {
 				const signature = mealPlanSignature(plan);
 				if (dismissedPlan.signature !== signature) {
 					dismissedPlan = {signature, keys: []};
+					persistDismissedPlan();
 				}
 				return dismissedPlan;
+			};
+			const restoreDismissedPlan = () => {
+				dismissedPlanStorageKey = `vp_shopping_dismissed_plan_${VP.accountId || "default"}`;
+				dismissedPlan = VP.safeStorage.getJSON(
+					dismissedPlanStorageKey,
+					{signature: "", keys: []},
+					value => value && typeof value.signature === "string" &&
+						Array.isArray(value.keys) && value.keys.every(key => typeof key === "string")
+				);
 			};
 
 			// 2. Sri Lankan Groceries List (50+ items)
@@ -484,7 +502,9 @@
 				const addManualItem = async event => {
 					event.preventDefault();
 					const input = $("nm");
-					const result = VPShopping.createManualShoppingItem(
+					const nextItems = S.map(item => Object.assign({}, item));
+					const result = VPShopping.addManualShoppingItem(
+						nextItems,
 						input.value,
 						$("shopQuantity").value,
 						$("shopUnit").value
@@ -495,19 +515,20 @@
 						return;
 					}
 					try {
-						status(`Finding a picture for ${result.item.name}...`);
-						result.item.image = await findShoppingImage(result.item.name);
+						if (!result.merged) {
+							status(`Finding a picture for ${result.item.name}...`);
+							result.item.image = await findShoppingImage(result.item.name);
+						}
 						const response = await api("/api/shopping", {
-							method: "POST",
-							body: JSON.stringify(result.item)
+							method: "PUT",
+							body: JSON.stringify({items: nextItems})
 						});
-						S = S.filter(item => String(item.id) !== String(response.item.id));
-						S.push(response.item);
+						S = response.items;
 						draw();
 						$("manualShopForm").reset();
-						status(response.merged
-							? `${response.item.name} quantity updated on your list.`
-							: `${response.item.name} added to your list.`);
+						status(result.merged
+							? `${result.item.name} quantity updated on your list.`
+							: `${result.item.name} added to your list.`);
 					} catch (error) {
 						status(`Unable to add item: ${error.message}`);
 					}
@@ -530,6 +551,7 @@
 
 				const syncMealPlanShoppingList = async (announce = false) => {
 					try {
+						await VP.ready;
 						const [planResponse, recipeCatalog, pantryResponse] = await Promise.all([
 							api("/api/meal-plan"),
 							api("/api/recipes"),
@@ -640,9 +662,17 @@
 							() => api("/api/shopping", {method: "DELETE"})
 						);
 						if (!cleared) return;
+						const dismissed = dismissedForPlan(currentMealPlan);
+						S.filter(item => item.source === "meal-plan").forEach(item => {
+							const key = VPShopping.ingredientKey(item.name, item.unit);
+							if (!dismissed.keys.includes(key)) dismissed.keys.push(key);
+						});
+						const dismissalsSaved = persistDismissedPlan();
 						S = [];
 						draw();
-						status("Shopping list cleared.");
+						status(dismissalsSaved
+							? "Shopping list cleared."
+							: "Shopping list cleared, but this browser could not save the meal-plan dismissals.");
 					} catch (error) {
 						status(`Unable to clear the shopping list: ${error.message}`);
 					}
@@ -671,13 +701,17 @@
 							if (!item) return;
 							await api(`/api/shopping/${encodeURIComponent(itemId)}`, {method: "DELETE"});
 							S = S.filter(entry => String(entry.id) !== String(itemId));
+							let dismissalSaved = true;
 							if (item.source === "meal-plan") {
 								const dismissed = dismissedForPlan(currentMealPlan);
 								const key = VPShopping.ingredientKey(item.name, item.unit);
 								if (!dismissed.keys.includes(key)) dismissed.keys.push(key);
+								dismissalSaved = persistDismissedPlan();
 							}
 							draw();
-							status(`${item.name} removed from your list.`);
+							status(dismissalSaved
+								? `${item.name} removed from your list.`
+								: `${item.name} removed, but this browser could not save the meal-plan dismissal.`);
 						}
 					} catch (error) {
 						status(`Unable to update the shopping list: ${error.message}`);
@@ -686,9 +720,18 @@
 
 				const initialize = async () => {
 					try {
+						await VP.ready;
+						restoreDismissedPlan();
 						const response = await api("/api/shopping");
-						S = response.items;
-						draw();
+						const uniqueItems = VPShopping.deduplicateShoppingItems(
+							response.items.map(item => Object.assign({}, item))
+						);
+						if (uniqueItems.length !== response.items.length) {
+							await saveShoppingList(uniqueItems);
+						} else {
+							S = response.items;
+							draw();
+						}
 						await syncMealPlanShoppingList();
 					} catch (error) {
 						draw();

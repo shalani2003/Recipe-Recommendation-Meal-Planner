@@ -128,7 +128,7 @@
 	}
 
 	function buildFromMealPlan(plan, catalog, previousItems = [], pantryItems = [], excludedKeys = []) {
-		const recipes = [...R, ...(catalog || [])];
+		const recipes = [...(catalog || []), ...R];
 		const selectedIds = Object.keys(plan || {}).reduce((ids, dayName) => {
 			const day = plan[dayName];
 			if (day && typeof day === "object") ids.push.apply(ids, Object.keys(day).map(meal => day[meal]));
@@ -325,6 +325,7 @@
 				unitGroup(normalizeUnit(candidate.unit)) === group
 			);
 			if (!existing) {
+				item.name = String(item.name).trim().replace(/\s+/g, " ");
 				unique.push(item);
 				return unique;
 			}
@@ -340,6 +341,9 @@
 				: 0;
 			existing.quantity = Number(((existingBase + itemBase) / unitFactor(existingUnit)).toFixed(3));
 			existing.unit = existingUnit;
+			existing.name = String(existing.name).trim().replace(/\s+/g, " ");
+			if (!existing.category && item.category) existing.category = item.category;
+			if (!existing.image && item.image) existing.image = item.image;
 			existing.done = Boolean(existing.done && item.done);
 
 			const existingManualBase = Number(existing.manualQuantityBase)

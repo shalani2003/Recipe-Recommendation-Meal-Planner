@@ -99,6 +99,15 @@ assert.deepStrictEqual(
 );
 assert(!builtInGenerated.some(item => item.name === "Not selected"));
 
+const catalogIdCollision = context.window.VPShopping.buildFromMealPlan(
+  { Mon: { Lunch: 1 } },
+  [{ id: 1, name: "Server recipe", ingredients: ["Catalog ingredient"] }]
+);
+assert.deepStrictEqual(
+  JSON.parse(JSON.stringify(catalogIdCollision.map(item => item.name))),
+  ["Catalog ingredient"]
+);
+
 const updated = context.window.VPShopping.buildFromMealPlan(
   { Wed: { Lunch: "custom:202" } },
   customRecipes,
@@ -266,7 +275,33 @@ const legacyDuplicates = context.window.VPShopping.deduplicateShoppingItems([
 ]);
 assert.deepStrictEqual(
   JSON.parse(JSON.stringify(legacyDuplicates.map(item => [item.name, item.quantity, item.unit]))),
-  [["Rice  ", 1.5, "kg"], ["RICE", 2, "pcs"]]
+  [["Rice", 1.5, "kg"], ["RICE", 2, "pcs"]]
+);
+
+const boughtDuplicates = context.window.VPShopping.deduplicateShoppingItems([
+  { id: "bought-rice", name: " Rice ", quantity: 1, unit: "kg", done: true, image: "/rice.jpg" },
+  { id: "unchecked-rice", name: "rice", quantity: 500, unit: "g", done: false, category: "Grains" }
+]);
+assert.deepStrictEqual(
+  JSON.parse(JSON.stringify(boughtDuplicates.map(item => [
+    item.name, item.quantity, item.unit, item.done, item.image, item.category
+  ]))),
+  [["Rice", 1.5, "kg", false, "/rice.jpg", "Grains"]]
+);
+
+const persistedManual = context.window.VPShopping.addManualShoppingItem([], "  Green   Tea ", "1", "kg");
+assert.ifError(persistedManual.error);
+const restoredManual = JSON.parse(JSON.stringify([persistedManual.item]));
+const addedAfterReload = context.window.VPShopping.addManualShoppingItem(
+  restoredManual,
+  "green tea",
+  "500",
+  "g"
+);
+assert.ifError(addedAfterReload.error);
+assert.deepStrictEqual(
+  JSON.parse(JSON.stringify(restoredManual.map(item => [item.name, item.quantity, item.unit]))),
+  [["Green Tea", 1.5, "kg"]]
 );
 
 const boughtItem = { id: "bought", name: "Rice", quantity: 1, unit: "kg", done: false, source: "meal-plan" };
