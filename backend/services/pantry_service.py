@@ -1,6 +1,7 @@
 """Pantry rules shared by the pantry routes and the shopping list (J7 "move to pantry")."""
 import math
-from datetime import date, datetime
+import re
+from datetime import date
 
 CATEGORIES = ["Vegetables", "Fruits", "Grains", "Protein", "Dairy", "Spices & sauces", "Other"]
 UNITS = ["pcs", "g", "kg", "ml", "l", "cups"]
@@ -12,8 +13,10 @@ def parse_expiry(value):
     if value in (None, ""):
         return None
     text = str(value).strip()
+    if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", text):
+        raise ValueError("Enter the expiry date as YYYY-MM-DD")
     try:
-        return datetime.strptime(text, "%Y-%m-%d").date().isoformat()
+        return date.fromisoformat(text).isoformat()
     except ValueError:
         raise ValueError("Enter the expiry date as YYYY-MM-DD")
 
@@ -102,7 +105,8 @@ def add_item(db, user_id, name, cat, qty, unit, exp, manage_transaction=True):
 def days_left(exp, today):
     if not exp:
         return None
-    return (date.fromisoformat(exp) - today).days
+    expiry_date = date.fromisoformat(parse_expiry(exp))
+    return (expiry_date - today).days
 
 
 def state_for(days):

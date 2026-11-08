@@ -110,6 +110,53 @@ def test_expiry_state_uses_the_clients_date(user):
     assert s["use_soon"] == 2 and s["expired"] == 1   # expired items are not counted as "use soon"
 
 
+def test_expiry_state_boundary_days(user):
+    today = date(2030, 6, 15)
+    user.delete("/api/pantry")
+    for label, delta in [("expired", -1), ("today", 0), ("one_day", 1),
+                         ("three_days", 3), ("four_days", 4)]:
+        add(user, name=label, exp=(today + timedelta(days=delta)).isoformat())
+
+    got = {item["name"]: (item["days_left"], item["state"])
+           for item in items(user, today.isoformat())["items"]}
+    assert got == {
+        "expired": (-1, "expired"),
+        "today": (0, "today"),
+        "one_day": (1, "soon"),
+        "three_days": (3, "soon"),
+        "four_days": (4, "ok"),
+    }
+
+
+def test_expiry_state_uses_the_supplied_local_calendar_date(user):
+    add(user, name="Timezone boundary", exp="2026-04-01")
+
+    utc_result = next(item for item in items(user, "2026-03-31")["items"]
+                      if item["name"] == "Timezone boundary")
+    colombo_result = next(item for item in items(user, "2026-04-01")["items"]
+                          if item["name"] == "Timezone boundary")
+
+    assert (utc_result["days_left"], utc_result["state"]) == (1, "soon")
+    assert (colombo_result["days_left"], colombo_result["state"]) == (0, "today")
+    assert utc_result["expiry_date"] == colombo_result["expiry_date"] == "2026-04-01"
+
+
+def test_expiry_state_across_month_year_and_leap_day(user):
+    user.delete("/api/pantry")
+    boundaries = [
+        ("month_end", date(2026, 4, 30), date(2026, 5, 1)),
+        ("year_end", date(2026, 12, 31), date(2027, 1, 1)),
+        ("leap_day", date(2024, 2, 28), date(2024, 2, 29)),
+        ("after_leap_day", date(2024, 2, 29), date(2024, 3, 1)),
+    ]
+    for name, today, expiry in boundaries:
+        add(user, name=name, exp=expiry.isoformat())
+        result = next(item for item in items(user, today.isoformat())["items"]
+                      if item["name"] == name)
+        assert result["days_left"] == 1, name
+        assert result["expiry_date"] == expiry.isoformat(), name
+
+
 def test_pantry_is_private_per_account(user, user2):
     iid = add(user, name="SecretSpice").get_json()["item"]["id"]
     assert all(i["name"] != "SecretSpice" for i in items(user2)["items"])
