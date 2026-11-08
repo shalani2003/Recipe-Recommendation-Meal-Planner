@@ -1,6 +1,10 @@
 """Shopping, hydration, and weight-history APIs."""
+import json
 import math
 from datetime import date
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote
+from urllib.request import Request, urlopen
 
 from flask import Blueprint, g, jsonify, request
 
@@ -26,7 +30,7 @@ def parse_day(value):
 def shopping_items(db, user_id):
     rows = db.execute(
         "SELECT id, name, qty, unit, cat, bought, expiry_date, source, "
-        "manual_quantity_base FROM shopping_items "
+        "manual_quantity_base, image FROM shopping_items "
         "WHERE user_id = ? ORDER BY id",
         (user_id,),
     ).fetchall()
@@ -45,6 +49,7 @@ def shopping_items(db, user_id):
             "is_bought": bool(row["bought"]),
             "source": row["source"],
             "manualQuantityBase": row["manual_quantity_base"],
+            "image": row["image"],
         }
         for row in rows
     ]
@@ -88,6 +93,15 @@ def shopping_item(data):
     source = data.get("source", "manual")
     if source not in ("manual", "meal-plan"):
         return None, "Shopping item source must be manual or meal-plan"
+    image = data.get("image")
+    if image in ("", None):
+        image = None
+    elif (
+        not isinstance(image, str)
+        or len(image) > 500
+        or not image.startswith(("https://", "/"))
+    ):
+        return None, "Shopping item image must be a valid URL"
     manual_quantity_base = data.get("manualQuantityBase", data.get("manual_quantity_base"))
     if manual_quantity_base in ("", None):
         manual_quantity_base = None
@@ -103,7 +117,7 @@ def shopping_item(data):
 
     return (
         name, quantity, unit, category, int(done), expiry_date, source,
-        manual_quantity_base,
+        manual_quantity_base, image,
     ), None
 
 
@@ -122,6 +136,7 @@ def shopping_item_json(row):
         "is_bought": bool(row["bought"]),
         "source": row["source"],
         "manualQuantityBase": row["manual_quantity_base"],
+        "image": row["image"],
     }
 
 
@@ -131,13 +146,39 @@ def get_shopping():
     return jsonify({"items": shopping_items(get_db(), g.user_id)})
 
 
+@bp.get("/shopping-image")
+@login_required
+def shopping_image():
+    name, problem = clean_text(
+        request.args.get("name"), "an item name", 1, 120, allow_markup=True
+    )
+    if problem:
+        return error(problem)
+    url = (
+        "https://world.openfoodfacts.org/cgi/search.pl?"
+        "search_terms=%s&search_simple=1&action=process&json=1&page_size=5"
+        "&fields=products.image_front_small_url,products.image_url"
+    ) % quote(name)
+    try:
+        request_obj = Request(url, headers={"User-Agent": "VitaPlate/1.0"})
+        with urlopen(request_obj, timeout=3) as response:
+            payload = json.load(response)
+    except (HTTPError, URLError, TimeoutError, ValueError):
+        return jsonify({"image": None})
+    for product in payload.get("products", []):
+        image = product.get("image_front_small_url") or product.get("image_url")
+        if isinstance(image, str) and image.startswith("https://"):
+            return jsonify({"image": image})
+    return jsonify({"image": None})
+
+
 @bp.post("/shopping")
 @login_required
 def add_shopping_item():
     item, problem = shopping_item(body())
     if problem:
         return error(problem)
-    name, quantity, unit, category, done, expiry_date, source, manual_base = item
+    name, quantity, unit, category, done, expiry_date, source, manual_base, image = item
     db = get_db()
     db.execute("BEGIN IMMEDIATE")
     existing = db.execute(
@@ -168,9 +209,10 @@ def add_shopping_item():
             manual_base = existing["manual_quantity_base"]
         db.execute(
             "UPDATE shopping_items SET qty = ?, cat = COALESCE(?, cat), "
-            "bought = ?, source = ?, manual_quantity_base = ? WHERE id = ? AND user_id = ?",
+            "bought = ?, source = ?, manual_quantity_base = ?, image = COALESCE(?, image) "
+            "WHERE id = ? AND user_id = ?",
             (quantity, category, int(bool(done or existing["bought"])), source,
-             manual_base, existing["id"], g.user_id),
+             manual_base, image, existing["id"], g.user_id),
         )
         item_id = existing["id"]
     else:
@@ -182,9 +224,10 @@ def add_shopping_item():
             return error("A shopping list can contain at most 500 items")
         cursor = db.execute(
             "INSERT INTO shopping_items "
-            "(user_id, name, qty, unit, cat, bought, expiry_date, source, manual_quantity_base) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (g.user_id, name, quantity, unit, category, done, expiry_date, source, manual_base),
+            "(user_id, name, qty, unit, cat, bought, expiry_date, source, "
+            "manual_quantity_base, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (g.user_id, name, quantity, unit, category, done, expiry_date, source,
+             manual_base, image),
         )
         item_id = cursor.lastrowid
     db.commit()
@@ -208,17 +251,18 @@ def replace_shopping():
         parsed, problem = shopping_item(item)
         if problem:
             return error(problem)
-        name, quantity, unit, category, done, expiry_date, source, manual_base = parsed
+        name, quantity, unit, category, done, expiry_date, source, manual_base, image = parsed
         cleaned.append(
-            (g.user_id, name, quantity, unit, category, done, expiry_date, source, manual_base)
+            (g.user_id, name, quantity, unit, category, done, expiry_date, source,
+             manual_base, image)
         )
 
     db = get_db()
     db.execute("DELETE FROM shopping_items WHERE user_id = ?", (g.user_id,))
     db.executemany(
         "INSERT INTO shopping_items "
-        "(user_id, name, qty, unit, cat, bought, expiry_date, source, manual_quantity_base) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "(user_id, name, qty, unit, cat, bought, expiry_date, source, "
+        "manual_quantity_base, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         cleaned,
     )
     db.commit()
