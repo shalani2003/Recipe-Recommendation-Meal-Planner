@@ -43,14 +43,23 @@ function recommendationCard(recipe) {
   return card;
 }
 
+function isDashboardRecommendationAllowed(recipe) {
+  if (typeof dietOk === "function" && !dietOk(recipe)) return false;
+  if (typeof recipeHasConflict === "function" && recipeHasConflict(recipe)) return false;
+  return true;
+}
+
 async function loadRecommendations() {
   const container = document.getElementById("recommendations");
   renderState(container, "loading", "Loading recommendations");
   try {
     const data = await dashboardRequest("/api/recommendations");
-    const recommendations = data.recommendations || [];
+    const recommendations = (data.recommendations || []).filter(recipe => {
+      // TEMP: remove when /api/recommendations filters diets/allergies on the server
+      return isDashboardRecommendationAllowed(recipe);
+    });
     if (!recommendations.length) {
-      renderState(container, "empty", "No recipes are available yet. Add recipes to get recommendations.");
+      renderState(container, "empty", "No recipes match your saved diets or allergies.");
       return;
     }
     container.replaceChildren(...recommendations.map(recommendationCard));
