@@ -430,6 +430,14 @@
 				const SHOP_IMAGE_FALLBACK = "assets/food/hero-healthy-bowl.jpg";
 				const getImage = item => VPShopping.resolveShoppingImage(item, IMAGE_MAP, SHOP_IMAGE_FALLBACK);
 				const status = message => $("shopStatus").textContent = message;
+				const findShoppingImage = async name => {
+					try {
+						const result = await api(`/api/shopping-image?name=${encodeURIComponent(name)}`);
+						return result.image || "";
+					} catch (_error) {
+						return "";
+					}
+				};
 
 				function draw() {
 					const listEl = $("list");
@@ -487,6 +495,8 @@
 						return;
 					}
 					try {
+						status(`Finding a picture for ${result.item.name}...`);
+						result.item.image = await findShoppingImage(result.item.name);
 						const response = await api("/api/shopping", {
 							method: "POST",
 							body: JSON.stringify(result.item)

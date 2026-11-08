@@ -103,7 +103,8 @@ CREATE TABLE IF NOT EXISTS shopping_items (
     bought             INTEGER NOT NULL DEFAULT 0,
     expiry_date        TEXT,
     source             TEXT NOT NULL DEFAULT 'manual',
-    manual_quantity_base REAL
+    manual_quantity_base REAL,
+    image             TEXT
 );
 
 -- Meal plan, water, health, profile (owner: K. K. Dilshan)
@@ -201,6 +202,7 @@ def init_db(path):
             "expiry_date": "TEXT",
             "source": "TEXT NOT NULL DEFAULT 'manual'",
             "manual_quantity_base": "REAL",
+            "image": "TEXT",
         }
         for col, definition in shopping_migrations.items():
             if col not in shopping_cols:

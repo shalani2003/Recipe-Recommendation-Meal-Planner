@@ -88,6 +88,7 @@ Pantry writes also mirror the canonical `pantry` rows to `pantry_items`, preserv
 | Method | Path | Body | Result |
 |---|---|---|---|
 | GET | `/shopping` | none | `{items: [{id, name, quantity, unit, category, done}]}` |
+| GET | `/shopping-image?name=...` | none | Looks up a matching food image through Open Food Facts and returns `{image}`; `image` is `null` when no match is found |
 | POST | `/shopping` | `{name, quantity?, unit?, category?, expiry_date?, is_bought?}` | Adds an item; matching name, unit, and expiry entries merge quantities |
 | PUT | `/shopping` | `items: [{name, quantity?, unit?, category?, expiry_date?, done?}]` | Replaces the current user's list and returns saved rows (legacy bulk-sync support) |
 | PATCH | `/shopping/<id>` | `{is_bought: boolean}` | Updates the bought state of one of the current user's items |
