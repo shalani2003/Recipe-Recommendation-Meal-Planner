@@ -116,14 +116,14 @@ function resetAccountState(user){
 }
 const V="Vegetarian",VG="Vegan",GF="Gluten-free",DF="Dairy-free",H="Halal";
 const R=[
- {id:1,name:"Chicken & broccoli bowl",kind:"broccoli",time:25,kcal:480,p:38,c:40,f:16,diets:[H,DF,GF],ing:["Chicken","Broccoli","Rice"]},
- {id:2,name:"Pumpkin dhal curry",kind:"carrot",time:30,kcal:390,p:16,c:58,f:10,diets:[V,VG,GF,DF,H],ing:["Pumpkin","Dhal","Coconut","Rice"]},
- {id:3,name:"Egg fried rice",kind:"egg",time:15,kcal:520,p:18,c:70,f:18,diets:[V,DF,H],ing:["Eggs","Rice","Onion"]},
- {id:4,name:"Tomato omelette",kind:"tomato",time:10,kcal:310,p:20,c:8,f:22,diets:[V,GF,H,DF],ing:["Eggs","Tomato","Onion"]},
- {id:5,name:"Avocado toast",kind:"avocado",time:10,kcal:340,p:9,c:32,f:20,diets:[V,VG,DF,H],ing:["Avocado","Bread","Tomato"]},
- {id:6,name:"Coconut roti & sambol",kind:"bowl",time:20,kcal:420,p:9,c:60,f:15,diets:[V,VG,DF,H],ing:["Coconut","Flour","Onion"]},
- {id:7,name:"Carrot & lentil soup",kind:"carrot",time:35,kcal:280,p:15,c:40,f:5,diets:[V,VG,GF,DF,H],ing:["Carrot","Dhal","Onion"]},
- {id:8,name:"Creamy chicken curry",kind:"bowl",time:40,kcal:560,p:42,c:22,f:32,diets:[GF,H],ing:["Chicken","Coconut","Onion","Curry powder"]}
+ {id:1,name:"Chicken & broccoli bowl",kind:"broccoli",time:25,kcal:480,p:38,c:40,f:16,diets:[H,DF,GF],ing:["Chicken","Broccoli","Rice"],instructions:["Cook the rice until tender.","Season and pan-cook the chicken until cooked through.","Steam or stir-fry the broccoli until tender-crisp, then serve with the chicken over rice."]},
+ {id:2,name:"Pumpkin dhal curry",kind:"carrot",time:30,kcal:390,p:16,c:58,f:10,diets:[V,VG,GF,DF,H],ing:["Pumpkin","Dhal","Coconut","Rice"],instructions:["Rinse the dhal and simmer it in water until nearly soft.","Add diced pumpkin and cook until tender.","Stir in coconut milk and curry seasoning; simmer gently and serve with rice."]},
+ {id:3,name:"Egg fried rice",kind:"egg",time:15,kcal:520,p:18,c:70,f:18,diets:[V,DF,H],ing:["Eggs","Rice","Onion"],instructions:["Cook the rice, or use leftover rice, and break up any clumps.","Scramble the eggs in a lightly oiled pan, then set aside.","Cook the onion until soft, add the rice and egg, and stir-fry until hot."]},
+ {id:4,name:"Tomato omelette",kind:"tomato",time:10,kcal:310,p:20,c:8,f:22,diets:[V,GF,H,DF],ing:["Eggs","Tomato","Onion"],instructions:["Beat the eggs and season lightly.","Cook the onion and tomato in a lightly oiled pan until softened.","Pour in the eggs and cook gently until set, folding the omelette before serving."]},
+ {id:5,name:"Avocado toast",kind:"avocado",time:10,kcal:340,p:9,c:32,f:20,diets:[V,VG,DF,H],ing:["Avocado","Bread","Tomato"],instructions:["Toast the bread until crisp.","Mash the avocado and spread it over the toast.","Top with sliced tomato and season to taste."]},
+ {id:6,name:"Coconut roti & sambol",kind:"bowl",time:20,kcal:420,p:9,c:60,f:15,diets:[V,VG,DF,H],ing:["Coconut","Flour","Onion"],instructions:["Mix flour and grated coconut with enough water to make a soft dough.","Shape into small flat roti and cook on a hot pan until browned on both sides.","Mix finely chopped onion with a little chilli and lime for a simple sambol, then serve together."]},
+ {id:7,name:"Carrot & lentil soup",kind:"carrot",time:35,kcal:280,p:15,c:40,f:5,diets:[V,VG,GF,DF,H],ing:["Carrot","Dhal","Onion"],instructions:["Rinse the dhal and chop the carrot and onion.","Simmer everything in water until the dhal and carrot are soft.","Mash or blend to your preferred texture, season, and serve warm."]},
+ {id:8,name:"Creamy chicken curry",kind:"bowl",time:40,kcal:560,p:42,c:22,f:32,diets:[GF,H],ing:["Chicken","Coconut","Onion","Curry powder"],instructions:["Cook the chopped onion with curry powder until fragrant.","Add the chicken and stir until the outside is no longer pink.","Add coconut milk and simmer until the chicken is fully cooked and the curry thickens."]}
 ];
 const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],MEALS=["Breakfast","Lunch","Dinner"];
 const INGREDIENT_ALIASES={

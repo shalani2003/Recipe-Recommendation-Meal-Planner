@@ -100,6 +100,29 @@
           </div>
         </form>
       </section>
+
+      <dialog class="recipe-details-dialog" id="recipe-details-dialog" aria-labelledby="recipe-details-title">
+        <div class="recipe-details-content">
+          <button class="recipe-details-close" type="button" aria-label="Close recipe details">×</button>
+          <img class="recipe-details-image" id="recipe-details-image" alt="">
+          <div class="recipe-details-body">
+            <h2 id="recipe-details-title"></h2>
+            <div class="recipe-details-meta" aria-label="Recipe nutrition and preparation time">
+              <span class="chip" id="recipe-details-time"></span>
+              <span class="chip warn" id="recipe-details-kcal"></span>
+              <span class="chip" id="recipe-details-macros"></span>
+            </div>
+            <section aria-labelledby="recipe-details-ingredients-title">
+              <h3 id="recipe-details-ingredients-title">Ingredients</h3>
+              <ul id="recipe-details-ingredients"></ul>
+            </section>
+            <section aria-labelledby="recipe-details-instructions-title">
+              <h3 id="recipe-details-instructions-title">Method</h3>
+              <ol id="recipe-details-instructions"></ol>
+            </section>
+          </div>
+        </div>
+      </dialog>
     </main>
   </div>
 
@@ -122,6 +145,43 @@
       7: "assets/food/carrot.jpg",
       8: "assets/food/creamchicken.jpg"
     };
+    const recipeDetailsDialog = $("recipe-details-dialog");
+
+    function showRecipeDetails(recipe) {
+      const ingredients = recipe.ing || recipe.ingredients || [];
+      const rawInstructions = recipe.instructions || [];
+      const instructions = Array.isArray(rawInstructions)
+        ? rawInstructions
+        : String(rawInstructions).split(/\r?\n/).flatMap(line =>
+            line.match(/[^.!?]+[.!?]?/g) || []
+          ).map(step => step.trim()).filter(Boolean);
+
+      $("recipe-details-title").textContent = recipe.name;
+      $("recipe-details-image").src = recipe.image || FOOD_IMAGES[recipe.id] || "assets/food/salad-bowl.jpg";
+      $("recipe-details-image").alt = recipe.name;
+      $("recipe-details-time").textContent = `${recipe.time || recipe.time_min || "—"} min`;
+      $("recipe-details-kcal").textContent = `${recipe.kcal || 0} kcal`;
+      $("recipe-details-macros").textContent =
+        `Protein ${recipe.p || recipe.protein || 0}g · Carbohydrates ${recipe.c || recipe.carbs || 0}g · Fat ${recipe.f || recipe.fat || 0}g`;
+      $("recipe-details-ingredients").replaceChildren(...ingredients.map(ingredient => {
+        const item = document.createElement("li");
+        item.textContent = ingredient;
+        return item;
+      }));
+      $("recipe-details-instructions").replaceChildren(...instructions.map(step => {
+        const item = document.createElement("li");
+        item.textContent = step;
+        return item;
+      }));
+      recipeDetailsDialog.showModal();
+    }
+
+    recipeDetailsDialog.querySelector(".recipe-details-close").addEventListener("click", () => {
+      recipeDetailsDialog.close();
+    });
+    recipeDetailsDialog.addEventListener("click", event => {
+      if (event.target === recipeDetailsDialog) recipeDetailsDialog.close();
+    });
 
     let mode = "all";
     let favs = [];
@@ -245,12 +305,14 @@
         return `
           <article class="rcard">
             <div class="recipe-photo-wrap">
-              <img class="recipe-photo" src="${photoUrl}" alt="Healthy ${VP.escapeHtml(r.name)}" loading="lazy">
+              <button class="recipe-photo-trigger" type="button" data-recipe-detail="${r.id}" aria-label="View details for ${VP.escapeHtml(r.name)}">
+                <img class="recipe-photo" src="${photoUrl}" alt="" loading="lazy">
+              </button>
               <span class="photo-label">🌿 Nourishing pick</span>
               <button class="heart" data-f="${r.id}" aria-pressed="${isFav}" aria-label="Favourite">${isFav ? "❤️" : "🤍"}</button>
             </div>
             <div class="recipe-card-body">
-              <h3>${VP.escapeHtml(r.name)}</h3>
+              <h3><button class="recipe-title-trigger" type="button" data-recipe-detail="${r.id}">${VP.escapeHtml(r.name)}</button></h3>
               <div class="meta">
                 <span class="chip">${matchPct(r)}% in pantry</span>
                 <span class="chip warn">${r.kcal} kcal</span>
@@ -270,6 +332,14 @@
     }
 
     document.addEventListener("click", async e => {
+      const detailTrigger = e.target.closest("[data-recipe-detail]");
+      if (detailTrigger) {
+        const recipe = [...R, ...apiPlanRecipes()]
+          .find(item => String(item.id) === detailTrigger.dataset.recipeDetail);
+        if (recipe) showRecipeDetails(recipe);
+        return;
+      }
+
       const d = e.target.dataset;
 
       if (d.m) {
@@ -421,19 +491,30 @@
         if (recipe.image) {
           const photoWrap = document.createElement("div");
           photoWrap.className = "recipe-photo-wrap";
+          const photoTrigger = document.createElement("button");
+          photoTrigger.className = "recipe-photo-trigger";
+          photoTrigger.type = "button";
+          photoTrigger.dataset.recipeDetail = `api:${recipe.id}`;
+          photoTrigger.setAttribute("aria-label", `View details for ${recipe.name}`);
           const photo = document.createElement("img");
           photo.className = "recipe-photo";
           photo.src = recipe.image;
-          photo.alt = recipe.name;
+          photo.alt = "";
           photo.loading = "lazy";
-          photoWrap.appendChild(photo);
+          photoTrigger.appendChild(photo);
+          photoWrap.appendChild(photoTrigger);
           card.appendChild(photoWrap);
         }
 
         const body = document.createElement("div");
         body.className = "recipe-card-body";
         const name = document.createElement("h3");
-        name.textContent = recipe.name;
+        const nameTrigger = document.createElement("button");
+        nameTrigger.className = "recipe-title-trigger";
+        nameTrigger.type = "button";
+        nameTrigger.dataset.recipeDetail = `api:${recipe.id}`;
+        nameTrigger.textContent = recipe.name;
+        name.appendChild(nameTrigger);
 
         const meta = document.createElement("div");
         meta.className = "meta";
@@ -445,23 +526,19 @@
         statusChip.textContent = pantry.missing.length ? "Still missing items" : "Ready to cook";
         meta.append(matchChip, statusChip);
 
-        const ingredients = document.createElement("p");
-        ingredients.textContent = "Ingredients: " + recipe.ingredients.join(", ");
         const pantryStatus = document.createElement("p");
         pantryStatus.className = "muted api-pantry-status";
         pantryStatus.textContent = pantry.missing.length
           ? `In pantry: ${pantry.available.length ? pantry.available.join(", ") : "none"} · Missing: ${pantry.missing.join(", ")}`
           : "You have everything needed for this recipe.";
 
-        const instructions = document.createElement("p");
-        instructions.textContent = recipe.instructions;
         const actions = document.createElement("div");
         actions.className = "row recipe-actions";
         actions.innerHTML = `
           <button class="btn btn-primary btn-sm" data-plan="${planRecipe.id}">Add to plan</button>
           <button class="btn btn-ghost btn-sm" data-shop="${planRecipe.id}">Add missing items to shopping list</button>
         `;
-        body.append(name, meta, ingredients, pantryStatus, instructions, actions);
+        body.append(name, meta, pantryStatus, actions);
         card.appendChild(body);
         apiRecipeContainer.appendChild(card);
       });
