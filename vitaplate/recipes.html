@@ -147,6 +147,14 @@
     };
     const recipeDetailsDialog = $("recipe-details-dialog");
 
+    function lockPageScroll() {
+      document.body.style.overflow = "hidden";
+    }
+
+    function unlockPageScroll() {
+      document.body.style.overflow = "";
+    }
+
     function showRecipeDetails(recipe) {
       const ingredients = recipe.ing || recipe.ingredients || [];
       const rawInstructions = recipe.instructions || [];
@@ -173,14 +181,24 @@
         item.textContent = step;
         return item;
       }));
+      lockPageScroll();
       recipeDetailsDialog.showModal();
     }
 
-    recipeDetailsDialog.querySelector(".recipe-details-close").addEventListener("click", () => {
+    const closeRecipeDetails = () => {
       recipeDetailsDialog.close();
-    });
+      unlockPageScroll();
+    };
+
+    recipeDetailsDialog.querySelector(".recipe-details-close").addEventListener("click", closeRecipeDetails);
     recipeDetailsDialog.addEventListener("click", event => {
-      if (event.target === recipeDetailsDialog) recipeDetailsDialog.close();
+      if (event.target === recipeDetailsDialog) closeRecipeDetails();
+    });
+    recipeDetailsDialog.addEventListener("close", unlockPageScroll);
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && recipeDetailsDialog.open) {
+        closeRecipeDetails();
+      }
     });
 
     let mode = "all";
