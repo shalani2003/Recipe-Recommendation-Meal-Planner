@@ -1,5 +1,6 @@
 """Persist user favorites, ratings, and meal plans."""
 import json
+import hashlib
 import re
 
 from flask import Blueprint, g, jsonify
@@ -22,14 +23,6 @@ def recipe_from_payload(db, data, create=True):
     name = " ".join(name.split())
     if not name or len(name) > 80 or BAD_RECIPE_NAME.search(name):
         return None, "Recipe name must be 1 to 80 characters of plain text"
-    row = db.execute(
-        "SELECT id FROM recipes WHERE lower(name) = lower(?) ORDER BY id LIMIT 1", (name,)
-    ).fetchone()
-    if row:
-        return row["id"], None
-    if not create:
-        return None, None
-
     ingredients = data.get("ingredients", data.get("ing", []))
     if not isinstance(ingredients, list) or any(
         not isinstance(item, str) or len(item) > 100 for item in ingredients
@@ -38,6 +31,39 @@ def recipe_from_payload(db, data, create=True):
     cleaned = [" ".join(item.split()) for item in ingredients]
     if len(cleaned) > 100:
         return None, "A recipe can have up to 100 ingredients"
+
+    # API recipe IDs are namespaced in the browser to avoid collisions with the
+    # separate built-in recipe IDs. Resolve those IDs directly when supplied.
+    recipe_ref = data.get("id")
+    if isinstance(recipe_ref, str) and recipe_ref.startswith("api:"):
+        match = re.fullmatch(r"api:([1-9]\d*)", recipe_ref)
+        if not match:
+            return None, "Recipe ID is invalid"
+        row = db.execute(
+            "SELECT id, name, ingredients FROM recipes WHERE id = ?", (int(match.group(1)),)
+        ).fetchone()
+        if row is None or row["name"].casefold() != name.casefold():
+            return None, "Recipe not found"
+        stored = json.loads(row["ingredients"] or "[]")
+        if sorted(item.casefold() for item in stored) != sorted(item.casefold() for item in cleaned):
+            return None, "Recipe ingredients do not match this recipe"
+        return row["id"], None
+
+    candidates = db.execute(
+        "SELECT id, ingredients FROM recipes WHERE lower(name) = lower(?) ORDER BY id", (name,)
+    ).fetchall()
+    wanted_ingredients = sorted(item.casefold() for item in cleaned)
+    for row in candidates:
+        stored = json.loads(row["ingredients"] or "[]")
+        if sorted(item.casefold() for item in stored) == wanted_ingredients:
+            return row["id"], None
+    if not ingredients and len(candidates) == 1:
+        return candidates[0]["id"], None
+    if not create:
+        return None, None
+    if not ingredients and candidates:
+        return None, "Recipe name is ambiguous; include its ingredients"
+
     cursor = db.execute(
         "INSERT INTO recipes (name, ingredients, instructions) VALUES (?, ?, ?)",
         (name, json.dumps(cleaned), ""),
@@ -59,16 +85,73 @@ def meal_plan_json(db, user_id):
     ]
 
 
+def store_external_preference(db, user_id, data, *, favorite=None, stars=None):
+    """Keep actions for non-catalog recipes on the user's own account record."""
+    name = " ".join(data["name"].split())
+    ingredients = [" ".join(item.split()) for item in data.get("ingredients", data.get("ing", []))]
+    canonical = json.dumps(sorted(item.casefold() for item in ingredients), ensure_ascii=False)
+    recipe_key = hashlib.sha256((name.casefold() + "\n" + canonical).encode("utf-8")).hexdigest()
+    existing = db.execute(
+        "SELECT is_favorite, stars FROM user_recipe_preferences WHERE user_id = ? AND recipe_key = ?",
+        (user_id, recipe_key),
+    ).fetchone()
+    is_favorite = bool(existing["is_favorite"]) if existing else False
+    current_stars = existing["stars"] if existing else None
+    if favorite is not None:
+        is_favorite = favorite
+    if "stars" in data:
+        current_stars = stars if stars else None
+    if not is_favorite and current_stars is None:
+        db.execute("DELETE FROM user_recipe_preferences WHERE user_id = ? AND recipe_key = ?", (user_id, recipe_key))
+    else:
+        db.execute(
+            "INSERT INTO user_recipe_preferences (user_id, recipe_key, name, ingredients, is_favorite, stars) "
+            "VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, recipe_key) DO UPDATE SET "
+            "name=excluded.name, ingredients=excluded.ingredients, is_favorite=excluded.is_favorite, stars=excluded.stars",
+            (user_id, recipe_key, name, json.dumps(ingredients), int(is_favorite), current_stars),
+        )
+    return recipe_key
+
+
 @bp.get("/favorites")
 @bp.get("/favourites")
 @login_required
 def list_favorites():
-    rows = get_db().execute(
+    db = get_db()
+    rows = db.execute(
         "SELECT r.name FROM favourites AS f JOIN recipes AS r ON r.id = f.recipe_id "
         "WHERE f.user_id = ? ORDER BY lower(r.name)",
         (g.user_id,),
     ).fetchall()
-    return jsonify({"favorites": [row["name"] for row in rows]})
+    external = db.execute(
+        "SELECT name FROM user_recipe_preferences WHERE user_id = ? AND is_favorite = 1 ORDER BY lower(name)",
+        (g.user_id,),
+    ).fetchall()
+    return jsonify({"favorites": [row["name"] for row in rows] + [row["name"] for row in external]})
+
+
+@bp.get("/favorites/records")
+@login_required
+def list_favorite_records():
+    db = get_db()
+    rows = db.execute(
+        "SELECT r.id, r.name, r.ingredients FROM favourites AS f "
+        "JOIN recipes AS r ON r.id = f.recipe_id "
+        "WHERE f.user_id = ? ORDER BY lower(r.name), r.id",
+        (g.user_id,),
+    ).fetchall()
+    records = [
+        {"id": row["id"], "name": row["name"], "ingredients": json.loads(row["ingredients"] or "[]")}
+        for row in rows
+    ]
+    external = db.execute(
+        "SELECT recipe_key, name, ingredients FROM user_recipe_preferences "
+        "WHERE user_id = ? AND is_favorite = 1 ORDER BY lower(name), recipe_key",
+        (g.user_id,),
+    ).fetchall()
+    records.extend({"id": "external:" + row["recipe_key"], "name": row["name"],
+                    "ingredients": json.loads(row["ingredients"] or "[]")} for row in external)
+    return jsonify({"records": records})
 
 
 @bp.post("/favorites")
@@ -76,9 +159,13 @@ def list_favorites():
 @login_required
 def add_favorite():
     db = get_db()
-    recipe_id, problem = recipe_from_payload(db, body())
+    recipe_id, problem = recipe_from_payload(db, body(), create=False)
     if problem:
         return error(problem)
+    if recipe_id is None:
+        store_external_preference(db, g.user_id, body(), favorite=True)
+        db.commit()
+        return jsonify({"ok": True}), 201
     db.execute(
         "INSERT OR IGNORE INTO favourites (user_id, recipe_id) VALUES (?, ?)",
         (g.user_id, recipe_id),
@@ -101,18 +188,28 @@ def remove_favorite():
             (g.user_id, recipe_id),
         )
         db.commit()
+    else:
+        store_external_preference(db, g.user_id, body(), favorite=False)
+        db.commit()
     return jsonify({"ok": True})
 
 
 @bp.get("/ratings")
 @login_required
 def list_ratings():
-    rows = get_db().execute(
+    db = get_db()
+    rows = db.execute(
         "SELECT r.name, rt.stars FROM ratings AS rt JOIN recipes AS r ON r.id = rt.recipe_id "
         "WHERE rt.user_id = ?",
         (g.user_id,),
     ).fetchall()
-    return jsonify({"ratings": {row["name"]: row["stars"] for row in rows}})
+    ratings = {row["name"]: row["stars"] for row in rows}
+    external = db.execute(
+        "SELECT name, stars FROM user_recipe_preferences WHERE user_id = ? AND stars IS NOT NULL",
+        (g.user_id,),
+    ).fetchall()
+    ratings.update({row["name"]: row["stars"] for row in external})
+    return jsonify({"ratings": ratings})
 
 
 @bp.put("/ratings")
@@ -136,11 +233,18 @@ def save_rating():
                 (g.user_id, recipe_id),
             )
             db.commit()
+        else:
+            store_external_preference(db, g.user_id, data, stars=0)
+            db.commit()
         return jsonify({"ok": True})
 
-    recipe_id, problem = recipe_from_payload(db, data)
+    recipe_id, problem = recipe_from_payload(db, data, create=False)
     if problem:
         return error(problem)
+    if recipe_id is None:
+        store_external_preference(db, g.user_id, data, stars=stars)
+        db.commit()
+        return jsonify({"ok": True})
     db.execute(
         "INSERT INTO ratings (user_id, recipe_id, stars) VALUES (?, ?, ?) "
         "ON CONFLICT(user_id, recipe_id) DO UPDATE SET stars = excluded.stars",

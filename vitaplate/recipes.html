@@ -222,12 +222,19 @@
     const loadSavedRecipeData = async () => {
       try {
         const [favoriteData, ratingData] = await Promise.all([
-          savedRecipeRequest("/api/favorites"),
+          savedRecipeRequest("/api/favorites/records"),
           savedRecipeRequest("/api/ratings")
         ]);
-        favs = favoriteData.favorites || [];
+        const records = favoriteData.records || [];
+        const normalizeIngredients = ingredients => (ingredients || [])
+          .map(item => String(item).trim().toLowerCase()).sort();
+        favs = R.filter(recipe => records.some(record =>
+          record.name.toLowerCase() === recipe.name.toLowerCase() &&
+          JSON.stringify(normalizeIngredients(record.ingredients)) === JSON.stringify(normalizeIngredients(recipe.ing))
+        )).map(recipe => recipe.name);
         rate = ratingData.ratings || {};
         draw();
+        window.dispatchEvent(new Event("vp-favorites-ready"));
       } catch (error) {
         console.error("Could not load saved favorites and ratings:", error);
         $("grid").textContent = error.message;
@@ -254,13 +261,20 @@
     const addRecipeToPlan = async recipe => {
       const current = await savedRecipeRequest("/api/meal-plan");
       const entries = current.meals || [];
+      const recipePayload = {
+        name: recipe.name,
+        ingredients: recipe.ing || recipe.ingredients || []
+      };
+      if (typeof recipe.id === "string" && /^api:\d+$/.test(recipe.id)) {
+        recipePayload.id = recipe.id;
+      }
       for (const dy of DAYS) {
         for (const m of MEALS) {
           if (!entries.some(entry => entry.day === dy && entry.meal === m)) {
             entries.push({
               day: dy,
               meal: m,
-              recipe: {name: recipe.name, ingredients: recipe.ing || recipe.ingredients || []}
+              recipe: recipePayload
             });
             await savedRecipeRequest("/api/meal-plan", "PUT", {meals: entries});
             await addMissingItemsToShoppingList(recipe);
@@ -293,7 +307,7 @@
           const matchesMode = (
             mode === "all" ||
             (mode === "fav" && favs.some(name => name.toLowerCase() === r.name.toLowerCase())) ||
-            (mode === "now" && matchPct(r) >= 60)
+            (mode === "now" && matchPct(r) === 100)
           );
 
           return passesDiet && matchesQuery && matchesMode;
@@ -362,9 +376,12 @@
 
       if (d.m) {
         mode = d.m;
+        apiCookNowOnly = false;
+        apiCookNowButton.setAttribute("aria-pressed", "false");
         document.querySelectorAll(".tab").forEach(t => {
           t.setAttribute("aria-pressed", t.dataset.m === mode);
         });
+        renderApiRecipes($("q").value);
       } else if (d.f) {
         const i = +d.f;
         const recipe = R.find(item => item.id === i);
@@ -378,6 +395,7 @@
           favs = isFavorite
             ? favs.filter(name => name.toLowerCase() !== recipe.name.toLowerCase())
             : [...favs, recipe.name];
+          window.dispatchEvent(new Event("vp-favorites-ready"));
         } catch (error) {
           alert(error.message);
           return;
@@ -460,26 +478,67 @@
     const apiRecipeCount = document.getElementById("api-recipe-count");
     const apiCookNowButton = document.getElementById("api-cook-now");
     let apiRecipes = [];
+    let apiFavoriteIds = new Set();
     let apiCookNowOnly = false;
 
     function getApiPantryMatch(recipe) {
-      const ingredients = recipe.ingredients || recipe.ing || [];
+      const ingredients = Array.isArray(recipe.ingredients)
+        ? recipe.ingredients
+        : Array.isArray(recipe.ing) ? recipe.ing : [];
       const available = ingredients.filter(haveIng);
       const missing = ingredients.filter(ingredient => !haveIng(ingredient));
       const percentage = ingredients.length
-        ? Math.round((available.length / recipe.ingredients.length) * 100)
+        ? Math.round((available.length / ingredients.length) * 100)
         : 0;
       return { available, missing, percentage };
+    }
+
+    function createIngredientGroup(titleText, ingredients, className, emptyText) {
+      const group = document.createElement("section");
+      group.className = `api-ingredient-group ${className}`;
+      const heading = document.createElement("h4");
+      heading.className = "api-ingredient-heading";
+      const title = document.createElement("span");
+      title.textContent = titleText;
+      const count = document.createElement("span");
+      count.className = "api-ingredient-count";
+      count.textContent = String(ingredients.length);
+      heading.append(title, count);
+
+      const list = document.createElement("ul");
+      list.className = "api-ingredient-list";
+      if (ingredients.length) {
+        ingredients.forEach(ingredient => {
+          const item = document.createElement("li");
+          item.className = "api-ingredient-pill";
+          item.textContent = ingredient;
+          list.appendChild(item);
+        });
+      } else {
+        const empty = document.createElement("li");
+        empty.className = "api-ingredient-empty";
+        empty.textContent = emptyText;
+        list.appendChild(empty);
+      }
+      group.append(heading, list);
+      return group;
     }
 
     function renderApiRecipes(searchText = "") {
       const query = searchText.trim().toLowerCase();
       const matches = apiRecipes
         .filter(recipe => {
-          const searchableText = [recipe.name, ...recipe.ingredients].join(" ").toLowerCase();
+          const ingredients = Array.isArray(recipe.ingredients)
+            ? recipe.ingredients
+            : Array.isArray(recipe.ing) ? recipe.ing : [];
+          const searchableText = [recipe.name, ...ingredients].join(" ").toLowerCase();
           const matchesSearch = searchableText.includes(query);
           const pantryMatch = getApiPantryMatch(recipe);
-          return dietOk(recipe) && matchesSearch && (!apiCookNowOnly || pantryMatch.percentage >= 60);
+          const isFavorite = apiFavoriteIds.has(String(recipe.id));
+          const matchesFavorites = mode !== "fav" || isFavorite;
+          const requiresFullPantry = mode === "now" || apiCookNowOnly;
+          const fullyCookable = ingredients.length > 0 && pantryMatch.missing.length === 0;
+          return dietOk(recipe) && matchesSearch && matchesFavorites && (!requiresFullPantry || fullyCookable);
         })
         .sort((a, b) => getApiPantryMatch(b).percentage - getApiPantryMatch(a).percentage);
 
@@ -489,10 +548,14 @@
       if (matches.length === 0) {
         const emptyMessage = document.createElement("p");
         emptyMessage.className = "muted api-empty-state";
-        emptyMessage.textContent = apiCookNowOnly
+        emptyMessage.textContent = mode === "fav"
           ? (query
-              ? `No recipes match “${searchText}” and the pantry filter. Try another search or turn off Cook now.`
-              : "No close pantry matches yet. Add ingredients in Pantry or turn off Cook now.")
+              ? `No favourite recipes match “${searchText}”. Try a different search or tap a heart to save a recipe.`
+              : "No favourite API recipes yet. Tap a heart to save one here.")
+          : (mode === "now" || apiCookNowOnly)
+          ? (query
+              ? `No recipes match “${searchText}” with every ingredient in your pantry.`
+              : "No recipes are fully covered by your pantry yet. Add ingredients in Pantry to see what you can cook.")
           : (query
               ? `No other recipes match “${searchText}”. Try a different name or ingredient.`
               : "There are no other recipes to show yet.");
@@ -505,6 +568,17 @@
         const planRecipe = apiPlanRecipes().find(item => String(item.id) === `api:${recipe.id}`);
         const card = document.createElement("article");
         card.className = "rcard";
+
+        const isFavorite = apiFavoriteIds.has(String(recipe.id));
+        const favoriteButton = document.createElement("button");
+        favoriteButton.className = "heart";
+        favoriteButton.type = "button";
+        favoriteButton.dataset.apiFav = String(recipe.id);
+        favoriteButton.setAttribute("aria-pressed", String(isFavorite));
+        favoriteButton.setAttribute("aria-label", isFavorite ? "Remove from favourites" : "Add to favourites");
+        favoriteButton.title = isFavorite ? "Remove from favourites" : "Add to favourites";
+        favoriteButton.textContent = isFavorite ? "❤️" : "🤍";
+        card.appendChild(favoriteButton);
 
         if (recipe.image) {
           const photoWrap = document.createElement("div");
@@ -544,11 +618,14 @@
         statusChip.textContent = pantry.missing.length ? "Still missing items" : "Ready to cook";
         meta.append(matchChip, statusChip);
 
-        const pantryStatus = document.createElement("p");
-        pantryStatus.className = "muted api-pantry-status";
-        pantryStatus.textContent = pantry.missing.length
-          ? `In pantry: ${pantry.available.length ? pantry.available.join(", ") : "none"} · Missing: ${pantry.missing.join(", ")}`
-          : "You have everything needed for this recipe.";
+        const pantryStatus = document.createElement("div");
+        pantryStatus.className = "api-ingredient-status";
+        pantryStatus.setAttribute("role", "group");
+        pantryStatus.setAttribute("aria-label", "Recipe ingredients by pantry availability");
+        pantryStatus.append(
+          createIngredientGroup("In your pantry", pantry.available, "is-available", "No ingredients in your pantry yet"),
+          createIngredientGroup("Still needed", pantry.missing, "is-missing", "Nothing missing — ready to cook")
+        );
 
         const actions = document.createElement("div");
         actions.className = "row recipe-actions";
@@ -557,9 +634,28 @@
           <button class="btn btn-ghost btn-sm" data-shop="${planRecipe.id}">Add missing items to shopping list</button>
         `;
         body.append(name, meta, pantryStatus, actions);
+        const removeActions = document.createElement("div");
+        removeActions.className = "recipe-remove-actions";
+        const removeButton = document.createElement("button");
+        removeButton.className = "btn btn-ghost btn-sm";
+        removeButton.type = "button";
+        removeButton.dataset.removeRecipe = String(recipe.id);
+        removeButton.textContent = "Remove recipe";
+        removeActions.appendChild(removeButton);
+        body.appendChild(removeActions);
         card.appendChild(body);
         apiRecipeContainer.appendChild(card);
       });
+    }
+
+    async function loadApiFavorites() {
+      try {
+        const data = await savedRecipeRequest("/api/favorites/records");
+        apiFavoriteIds = new Set((data.records || []).map(record => String(record.id)));
+        renderApiRecipes(document.getElementById("q").value);
+      } catch (error) {
+        console.error("Could not load API recipe favourites:", error);
+      }
     }
 
     async function loadApiRecipes() {
@@ -593,9 +689,57 @@
     window.addEventListener("vp-data-ready", () => {
       renderApiRecipes(document.getElementById("q").value);
     });
+    window.addEventListener("vp-favorites-ready", loadApiFavorites);
 
     const addRecipeForm = document.getElementById("add-recipe-form");
     const addRecipeStatus = document.getElementById("add-recipe-status");
+
+    apiRecipeContainer.addEventListener("click", async event => {
+      const favoriteButton = event.target.closest("[data-api-fav]");
+      if (favoriteButton) {
+        const recipe = apiRecipes.find(item => String(item.id) === favoriteButton.dataset.apiFav);
+        if (!recipe) return;
+        const wasFavorite = apiFavoriteIds.has(String(recipe.id));
+        favoriteButton.disabled = true;
+        try {
+          await savedRecipeRequest("/api/favorites", wasFavorite ? "DELETE" : "POST", {
+            id: `api:${recipe.id}`,
+            name: recipe.name,
+            ingredients: recipe.ingredients || recipe.ing || []
+          });
+          if (wasFavorite) apiFavoriteIds.delete(String(recipe.id));
+          else apiFavoriteIds.add(String(recipe.id));
+          renderApiRecipes(document.getElementById("q").value);
+          return;
+        } catch (error) {
+          favoriteButton.disabled = false;
+          window.alert(error.message);
+          return;
+        }
+      }
+
+      const button = event.target.closest("[data-remove-recipe]");
+      if (!button) return;
+      const recipe = apiRecipes.find(item => String(item.id) === button.dataset.removeRecipe);
+      if (!recipe || !window.confirm(`Remove “${recipe.name}” from Other Recipes?`)) return;
+
+      button.disabled = true;
+      button.textContent = "Removing…";
+      try {
+        const response = await fetch(`${RECIPE_API_BASE}/api/recipes/${encodeURIComponent(recipe.id)}`, {
+          method: "DELETE",
+          credentials: "same-origin"
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || "The recipe could not be removed.");
+        apiRecipes = apiRecipes.filter(item => String(item.id) !== String(recipe.id));
+        renderApiRecipes(document.getElementById("q").value);
+      } catch (error) {
+        button.disabled = false;
+        button.textContent = "Remove recipe";
+        window.alert(error.message);
+      }
+    });
 
     addRecipeForm.addEventListener("submit", async event => {
       event.preventDefault();
@@ -635,6 +779,7 @@
     });
 
     loadApiRecipes();
+    loadApiFavorites();
   </script>
 </body>
 </html>

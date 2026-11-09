@@ -63,3 +63,15 @@ def add_recipe():
     db.commit()
     recipe = recipe_json(db.execute("SELECT * FROM recipes WHERE id = ?", (cur.lastrowid,)).fetchone())
     return jsonify({"success": True, "message": "Recipe saved successfully", "recipe": recipe}), 201
+
+
+@bp.delete("/recipes/<int:recipe_id>")
+@login_required
+def delete_recipe(recipe_id):
+    """Remove a recipe from the shared recipe list."""
+    db = get_db()
+    cursor = db.execute("DELETE FROM recipes WHERE id = ?", (recipe_id,))
+    if cursor.rowcount == 0:
+        return error("Recipe not found", 404)
+    db.commit()
+    return jsonify({"success": True})
