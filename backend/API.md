@@ -107,7 +107,8 @@ Built-in sample recipes remain shared. On startup, legacy non-built-in recipes w
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/recipes` | Public shared recipes plus the logged-in user's recipes. `[{id, name, ingredients, instructions, image, is_owner}]` |
+| GET | `/recipes` | Public shared recipes plus the logged-in user's recipes. `[{id, name, ingredients, instructions, image}]` |
+| GET | `/recipes/mine` | Login required. `{ids: [recipe IDs owned by the account]}` |
 | POST | `/recipes` | Login required. multipart: `name`, `ingredients` (comma separated), `instructions`, `imageFile` (optional; JPG/PNG/WebP, up to 5 MB). Reply: `{success, message, recipe}` |
 
 ## Recommendations

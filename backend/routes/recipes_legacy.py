@@ -18,10 +18,9 @@ bp = Blueprint("recipes_legacy", __name__, url_prefix="/api")
 MAX_PHOTO_BYTES = 5 * 1024 * 1024
 
 
-def recipe_json(r, user_id=None):
+def recipe_json(r):
     return {"id": r["id"], "name": r["name"], "ingredients": json.loads(r["ingredients"]),
-            "instructions": r["instructions"], "image": r["image"],
-            "is_owner": user_id is not None and r["owner_user_id"] == user_id}
+            "instructions": r["instructions"], "image": r["image"]}
 
 
 @bp.get("/recipes")
@@ -31,7 +30,16 @@ def list_recipes():  # public, like the old Node API
         "SELECT * FROM recipes WHERE owner_user_id IS NULL OR owner_user_id = ? ORDER BY id",
         (user_id,),
     )
-    return jsonify([recipe_json(r, user_id) for r in rows])
+    return jsonify([recipe_json(r) for r in rows])
+
+
+@bp.get("/recipes/mine")
+@login_required
+def list_my_recipes():
+    rows = get_db().execute(
+        "SELECT id FROM recipes WHERE owner_user_id = ? ORDER BY id", (g.user_id,)
+    ).fetchall()
+    return jsonify({"ids": [row["id"] for row in rows]})
 
 
 @bp.post("/recipes")
@@ -69,7 +77,7 @@ def add_recipe():
         (g.user_id, name, json.dumps(ingredients), instructions, image_path),
     )
     db.commit()
-    recipe = recipe_json(db.execute("SELECT * FROM recipes WHERE id = ?", (cur.lastrowid,)).fetchone(), g.user_id)
+    recipe = recipe_json(db.execute("SELECT * FROM recipes WHERE id = ?", (cur.lastrowid,)).fetchone())
     return jsonify({"success": True, "message": "Recipe saved successfully", "recipe": recipe}), 201
 
 

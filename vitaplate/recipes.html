@@ -479,6 +479,7 @@
     const apiCookNowButton = document.getElementById("api-cook-now");
     let apiRecipes = [];
     let apiFavoriteIds = new Set();
+    let apiOwnedRecipeIds = new Set();
     let apiCookNowOnly = false;
 
     function getApiPantryMatch(recipe) {
@@ -634,7 +635,7 @@
           <button class="btn btn-ghost btn-sm" data-shop="${planRecipe.id}">Add missing items to shopping list</button>
         `;
         body.append(name, meta, pantryStatus, actions);
-        if (recipe.is_owner) {
+        if (apiOwnedRecipeIds.has(String(recipe.id))) {
           const removeActions = document.createElement("div");
           removeActions.className = "recipe-remove-actions";
           const removeButton = document.createElement("button");
@@ -663,14 +664,23 @@
     async function loadApiRecipes() {
       try {
         await VP.ready;
-        const response = await fetch(`${RECIPE_API_BASE}/api/recipes`);
+        const [response, ownedResponse] = await Promise.all([
+          fetch(`${RECIPE_API_BASE}/api/recipes`),
+          fetch(`${RECIPE_API_BASE}/api/recipes/mine`, { credentials: "same-origin" })
+        ]);
         if (!response.ok) {
           const result = await response.json().catch(() => ({}));
           throw new Error(result.message || result.error || "The server could not load the recipes.");
         }
+        if (!ownedResponse.ok) {
+          const result = await ownedResponse.json().catch(() => ({}));
+          throw new Error(result.error || "Could not identify the recipes in your account.");
+        }
         const result = await response.json();
+        const owned = await ownedResponse.json();
 
         apiRecipes = Array.isArray(result) ? result : result.recipes || [];
+        apiOwnedRecipeIds = new Set((owned.ids || []).map(String));
         renderApiRecipes(document.getElementById("q").value);
       } catch (error) {
         apiRecipeContainer.textContent = "Could not load recipes. Check that the API server is running.";
@@ -735,6 +745,7 @@
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.error || "The recipe could not be removed.");
         apiRecipes = apiRecipes.filter(item => String(item.id) !== String(recipe.id));
+        apiOwnedRecipeIds.delete(String(recipe.id));
         renderApiRecipes(document.getElementById("q").value);
       } catch (error) {
         button.disabled = false;
@@ -767,7 +778,9 @@
           throw new Error(result.message || result.error || "The recipe could not be saved.");
         }
 
-        apiRecipes.push(result.recipe || result);
+        const savedRecipe = result.recipe || result;
+        apiRecipes.push(savedRecipe);
+        apiOwnedRecipeIds.add(String(savedRecipe.id));
         apiCookNowOnly = false;
         apiCookNowButton.setAttribute("aria-pressed", "false");
         addRecipeForm.reset();
