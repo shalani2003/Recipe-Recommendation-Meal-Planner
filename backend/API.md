@@ -103,10 +103,13 @@ Profile weight updates are also appended to `weight_log` only when the saved wei
 
 ## Recipes (temporary, until routes/recipes.py)
 
+Built-in sample recipes remain shared. On startup, legacy non-built-in recipes without an owner are assigned to the first account in the database. A recipe created through `POST /recipes` belongs to the logged-in account and is returned only to that account by `GET /recipes`. Only its owner can remove it. Recommendations and recipe lookups also exclude recipes owned by other accounts.
+
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/recipes` | Public. `[{id, name, ingredients, instructions, image}]` |
-| POST | `/recipes` | multipart: `name`, `ingredients` (comma separated), `instructions`, `imageFile` (optional; JPG/PNG/WebP, up to 5 MB). Reply: `{success, message, recipe}` |
+| GET | `/recipes` | Public shared recipes plus the logged-in user's recipes. `[{id, name, ingredients, instructions, image}]` |
+| GET | `/recipes/mine` | Login required. `{ids: [recipe IDs owned by the account]}` |
+| POST | `/recipes` | Login required. multipart: `name`, `ingredients` (comma separated), `instructions`, `imageFile` (optional; JPG/PNG/WebP, up to 5 MB). Reply: `{success, message, recipe}` |
 
 ## Recommendations
 

@@ -14,7 +14,7 @@ MEALS = {"Breakfast", "Lunch", "Dinner"}
 BAD_RECIPE_NAME = re.compile(r"[<>\x00-\x1f]")
 
 
-def recipe_from_payload(db, data, create=True):
+def recipe_from_payload(db, data, user_id, create=True):
     if not isinstance(data, dict):
         return None, "A recipe object is required"
     name = data.get("name")
@@ -40,7 +40,9 @@ def recipe_from_payload(db, data, create=True):
         if not match:
             return None, "Recipe ID is invalid"
         row = db.execute(
-            "SELECT id, name, ingredients FROM recipes WHERE id = ?", (int(match.group(1)),)
+            "SELECT id, name, ingredients FROM recipes WHERE id = ? "
+            "AND (owner_user_id IS NULL OR owner_user_id = ?)",
+            (int(match.group(1)), user_id),
         ).fetchone()
         if row is None or row["name"].casefold() != name.casefold():
             return None, "Recipe not found"
@@ -50,7 +52,9 @@ def recipe_from_payload(db, data, create=True):
         return row["id"], None
 
     candidates = db.execute(
-        "SELECT id, ingredients FROM recipes WHERE lower(name) = lower(?) ORDER BY id", (name,)
+        "SELECT id, ingredients FROM recipes WHERE lower(name) = lower(?) "
+        "AND (owner_user_id IS NULL OR owner_user_id = ?) ORDER BY id",
+        (name, user_id),
     ).fetchall()
     wanted_ingredients = sorted(item.casefold() for item in cleaned)
     for row in candidates:
@@ -65,8 +69,8 @@ def recipe_from_payload(db, data, create=True):
         return None, "Recipe name is ambiguous; include its ingredients"
 
     cursor = db.execute(
-        "INSERT INTO recipes (name, ingredients, instructions) VALUES (?, ?, ?)",
-        (name, json.dumps(cleaned), ""),
+        "INSERT INTO recipes (owner_user_id, name, ingredients, instructions) VALUES (?, ?, ?, ?)",
+        (user_id, name, json.dumps(cleaned), ""),
     )
     return cursor.lastrowid, None
 
@@ -159,7 +163,7 @@ def list_favorite_records():
 @login_required
 def add_favorite():
     db = get_db()
-    recipe_id, problem = recipe_from_payload(db, body(), create=False)
+    recipe_id, problem = recipe_from_payload(db, body(), g.user_id, create=False)
     if problem:
         return error(problem)
     if recipe_id is None:
@@ -179,7 +183,7 @@ def add_favorite():
 @login_required
 def remove_favorite():
     db = get_db()
-    recipe_id, problem = recipe_from_payload(db, body(), create=False)
+    recipe_id, problem = recipe_from_payload(db, body(), g.user_id, create=False)
     if problem:
         return error(problem)
     if recipe_id is not None:
@@ -224,7 +228,7 @@ def save_rating():
 
     db = get_db()
     if stars == 0:
-        recipe_id, problem = recipe_from_payload(db, data, create=False)
+        recipe_id, problem = recipe_from_payload(db, data, g.user_id, create=False)
         if problem:
             return error(problem)
         if recipe_id is not None:
@@ -238,7 +242,7 @@ def save_rating():
             db.commit()
         return jsonify({"ok": True})
 
-    recipe_id, problem = recipe_from_payload(db, data, create=False)
+    recipe_id, problem = recipe_from_payload(db, data, g.user_id, create=False)
     if problem:
         return error(problem)
     if recipe_id is None:
@@ -286,7 +290,7 @@ def save_meal_plan():
         if recipe is None:
             entries.append((day, meal, None))
             continue
-        recipe_id, problem = recipe_from_payload(db, recipe)
+        recipe_id, problem = recipe_from_payload(db, recipe, g.user_id)
         if problem:
             return error(problem)
         entries.append((day, meal, recipe_id))
