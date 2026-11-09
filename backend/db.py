@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS settings (
 -- Recipes, favourites, ratings, shopping list (owner: S. Y. S. Jayathilaka)
 CREATE TABLE IF NOT EXISTS recipes (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     name         TEXT NOT NULL,
     ingredients  TEXT NOT NULL DEFAULT '[]',
     instructions TEXT NOT NULL DEFAULT '',
@@ -207,6 +208,28 @@ def init_db(path):
         for col, definition in profile_migrations.items():
             if col not in profile_cols:
                 db.execute("ALTER TABLE profiles ADD COLUMN %s %s" % (col, definition))
+        recipe_cols = {r[1] for r in db.execute("PRAGMA table_info(recipes)")}
+        if "owner_user_id" not in recipe_cols:
+            db.execute("ALTER TABLE recipes ADD COLUMN owner_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE")
+        first_user = db.execute("SELECT id FROM users ORDER BY id LIMIT 1").fetchone()
+        if first_user:
+            shared_recipes = {
+                (name.casefold(), tuple(sorted(item.casefold() for item in ingredients)))
+                for name, ingredients, _instructions, _image in LEGACY_RECIPES
+            }
+            legacy_rows = db.execute(
+                "SELECT id, name, ingredients FROM recipes WHERE owner_user_id IS NULL"
+            ).fetchall()
+            for row in legacy_rows:
+                recipe_key = (
+                    row[1].casefold(),
+                    tuple(sorted(str(item).casefold() for item in json.loads(row[2] or "[]"))),
+                )
+                if recipe_key not in shared_recipes:
+                    db.execute(
+                        "UPDATE recipes SET owner_user_id = ? WHERE id = ? AND owner_user_id IS NULL",
+                        (first_user[0], row[0]),
+                    )
         shopping_cols = {r[1] for r in db.execute("PRAGMA table_info(shopping_items)")}
         shopping_migrations = {
             "expiry_date": "TEXT",

@@ -227,7 +227,7 @@ def delete_picture():
 @bp.delete("/account/data")
 @login_required
 def reset_account_data():
-    """Delete this user's data only (pantry, diets, plan, shopping, health, settings, picture).
+    """Delete this user's data only (including recipes they added).
     The account and login are kept, and the answer says so."""
     data = body()
     if not isinstance(data, dict):
@@ -239,6 +239,7 @@ def reset_account_data():
     remove_picture_file(row["picture"])
     for table in USER_DATA_TABLES:
         db.execute("DELETE FROM %s WHERE user_id = ?" % table, (g.user_id,))
+    db.execute("DELETE FROM recipes WHERE owner_user_id = ?", (g.user_id,))
     db.execute("UPDATE users SET picture = NULL WHERE id = ?", (g.user_id,))
     db.commit()
     return jsonify({"ok": True, "account_kept": True, "logged_in": True,

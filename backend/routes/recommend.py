@@ -106,7 +106,9 @@ def recommendations():
     }
     rows = db.execute(
         "SELECT id, name, ingredients, instructions, image, diets, time_min, kcal, "
-        "protein, carbs, fat FROM recipes ORDER BY lower(name), id"
+        "protein, carbs, fat FROM recipes "
+        "WHERE owner_user_id IS NULL OR owner_user_id = ? ORDER BY lower(name), id",
+        (g.user_id,),
     ).fetchall()
     ranked = []
     for row in rows:

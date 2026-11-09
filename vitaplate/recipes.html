@@ -634,15 +634,17 @@
           <button class="btn btn-ghost btn-sm" data-shop="${planRecipe.id}">Add missing items to shopping list</button>
         `;
         body.append(name, meta, pantryStatus, actions);
-        const removeActions = document.createElement("div");
-        removeActions.className = "recipe-remove-actions";
-        const removeButton = document.createElement("button");
-        removeButton.className = "btn btn-ghost btn-sm";
-        removeButton.type = "button";
-        removeButton.dataset.removeRecipe = String(recipe.id);
-        removeButton.textContent = "Remove recipe";
-        removeActions.appendChild(removeButton);
-        body.appendChild(removeActions);
+        if (recipe.is_owner) {
+          const removeActions = document.createElement("div");
+          removeActions.className = "recipe-remove-actions";
+          const removeButton = document.createElement("button");
+          removeButton.className = "btn btn-ghost btn-sm";
+          removeButton.type = "button";
+          removeButton.dataset.removeRecipe = String(recipe.id);
+          removeButton.textContent = "Remove recipe";
+          removeActions.appendChild(removeButton);
+          body.appendChild(removeActions);
+        }
         card.appendChild(body);
         apiRecipeContainer.appendChild(card);
       });

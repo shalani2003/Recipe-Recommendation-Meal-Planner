@@ -5,6 +5,24 @@ const CATS=VP.pantryCategories.reduce((categories,category)=>{
   return categories;
 },{});
 const QUICK=[["Rice","Grains"],["Dhal","Grains"],["Coconut","Fruits"],["Eggs","Protein"],["Onion","Vegetables"],["Tomato","Vegetables"],["Chicken","Protein"],["Curry powder","Spices & sauces"]];
+const ITEM_PHOTOS={
+  "avocado":"avocado.jpg","avocados":"avocado.jpg",
+  "baked salmon":"baked-salmon.jpg","salmon":"baked-salmon.jpg","fish":"baked-salmon.jpg",
+  "basmati rice":"vegetable-rice.jpeg","rice":"vegetable-rice.jpeg",
+  "carrot":"carrot.jpg","carrots":"carrot.jpg",
+  "chicken":"chickenandbrocoli.jpg","broccoli":"chickenandbrocoli.jpg",
+  "coconut":"polroti.jpg","roti":"polroti.jpg",
+  "dhal":"lentil-soup.jpg","lentil":"lentil-soup.jpg","lentils":"lentil-soup.jpg",
+  "egg":"eggandtomato.jpg","eggs":"eggandtomato.jpg","tomato":"eggandtomato.jpg",
+  "mango":"api-mango-yogurt.jpg","yogurt":"api-mango-yogurt.jpg","yoghurt":"api-mango-yogurt.jpg",
+  "spinach":"api-spinach-omelette.jpg","cucumber":"salad-bowl.jpg","salad":"salad-bowl.jpg",
+  "bread":"avocado-toast.jpg","pumpkin":"pumpkin.jpg"
+};
+const CATEGORY_PHOTOS={
+  Vegetables:"salad-bowl.jpg",Fruits:"avocado.jpg",Grains:"vegetable-rice.jpeg",
+  Protein:"chicken-quinoa.jpg",Dairy:"api-mango-yogurt.jpg",
+  "Spices & sauces":"hero-healthy-bowl.jpg",Other:"hero-healthy-bowl.jpg"
+};
 const DIETS=["Vegetarian","Vegan","Gluten-free","Dairy-free","Nut-free","Halal","Low sugar"];
 const MAX_QUANTITY=100000;
 const $=id=>document.getElementById(id);
@@ -64,8 +82,8 @@ function render(){
 }
 function card(i){
   const d=i.days_left;const s={expired:"exp",today:"soon",soon:"soon",ok:"ok",none:""}[i.state];
-  const n=i.name.toLowerCase();
-  const photo=(/chicken|egg|fish|salmon|protein/.test(n))?"assets/food/chicken-quinoa.jpg":(/tomato|avocado|fruit|banana|apple|vegetable|broccoli|carrot|onion|salad/.test(n))?"assets/food/salad-bowl.jpg":(/dhal|lentil|rice|grain|coconut|milk|dairy|soup/.test(n))?"assets/food/lentil-soup.jpg":"assets/food/hero-healthy-bowl.jpg";
+  const key=i.name.trim().toLowerCase().replace(/\s+/g," ");
+  const photo="assets/food/"+(ITEM_PHOTOS[key]||CATEGORY_PHOTOS[i.cat]||CATEGORY_PHOTOS.Other);
   const t=d===null?"No expiry date":d<0?"Expired "+(-d)+" day(s) ago":d===0?"Expires today":d<=3?"Expires in "+d+" day(s)":"Fresh for "+d+" days";
   return `<article class="item ${s}"><div class="item-top"><img class="pantry-item-photo" src="${photo}" alt="${VP.escapeHtml(i.name)}" loading="lazy"><b>${VP.escapeHtml(i.name)}</b><button class="rm" data-ed="${i.id}" aria-label="Edit ${VP.escapeHtml(i.name)}">✎</button><button class="rm" data-rm="${i.id}" aria-label="Remove ${VP.escapeHtml(i.name)}">✕</button></div>
  <div class="qty"><button data-m="${i.id}" aria-label="Less">−</button><span>${i.qty} ${VP.escapeHtml(i.unit)}</span><button data-p="${i.id}" aria-label="More">+</button></div><span class="tag ${s}">${t}</span></article>`;

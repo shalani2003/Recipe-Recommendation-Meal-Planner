@@ -8,7 +8,7 @@ import json
 import os
 import secrets
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, g, jsonify, request, session
 
 from auth_helpers import error, login_required
 from db import get_db
@@ -18,14 +18,20 @@ bp = Blueprint("recipes_legacy", __name__, url_prefix="/api")
 MAX_PHOTO_BYTES = 5 * 1024 * 1024
 
 
-def recipe_json(r):
+def recipe_json(r, user_id=None):
     return {"id": r["id"], "name": r["name"], "ingredients": json.loads(r["ingredients"]),
-            "instructions": r["instructions"], "image": r["image"]}
+            "instructions": r["instructions"], "image": r["image"],
+            "is_owner": user_id is not None and r["owner_user_id"] == user_id}
 
 
 @bp.get("/recipes")
 def list_recipes():  # public, like the old Node API
-    return jsonify([recipe_json(r) for r in get_db().execute("SELECT * FROM recipes ORDER BY id")])
+    user_id = session.get("user_id")
+    rows = get_db().execute(
+        "SELECT * FROM recipes WHERE owner_user_id IS NULL OR owner_user_id = ? ORDER BY id",
+        (user_id,),
+    )
+    return jsonify([recipe_json(r, user_id) for r in rows])
 
 
 @bp.post("/recipes")
@@ -58,19 +64,23 @@ def add_recipe():
             out.write(data)
         image_path = "/assets/food/" + filename
     db = get_db()
-    cur = db.execute("INSERT INTO recipes (name, ingredients, instructions, image) VALUES (?,?,?,?)",
-                     (name, json.dumps(ingredients), instructions, image_path))
+    cur = db.execute(
+        "INSERT INTO recipes (owner_user_id, name, ingredients, instructions, image) VALUES (?,?,?,?,?)",
+        (g.user_id, name, json.dumps(ingredients), instructions, image_path),
+    )
     db.commit()
-    recipe = recipe_json(db.execute("SELECT * FROM recipes WHERE id = ?", (cur.lastrowid,)).fetchone())
+    recipe = recipe_json(db.execute("SELECT * FROM recipes WHERE id = ?", (cur.lastrowid,)).fetchone(), g.user_id)
     return jsonify({"success": True, "message": "Recipe saved successfully", "recipe": recipe}), 201
 
 
 @bp.delete("/recipes/<int:recipe_id>")
 @login_required
 def delete_recipe(recipe_id):
-    """Remove a recipe from the shared recipe list."""
+    """Only the account that added a recipe can remove it."""
     db = get_db()
-    cursor = db.execute("DELETE FROM recipes WHERE id = ?", (recipe_id,))
+    cursor = db.execute(
+        "DELETE FROM recipes WHERE id = ? AND owner_user_id = ?", (recipe_id, g.user_id)
+    )
     if cursor.rowcount == 0:
         return error("Recipe not found", 404)
     db.commit()
