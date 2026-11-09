@@ -55,7 +55,7 @@ async function loadRecommendations() {
   try {
     const data = await dashboardRequest("/api/recommendations");
     const recommendations = (data.recommendations || []).filter(recipe => {
-      // TEMP: remove when /api/recommendations filters diets/allergies on the server
+      // Keep the client-side check as a second guard; the API filters before ranking.
       return isDashboardRecommendationAllowed(recipe);
     });
     if (!recommendations.length) {

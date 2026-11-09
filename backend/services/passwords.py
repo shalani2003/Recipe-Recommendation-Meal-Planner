@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """Password hashing and verification for account credentials and recovery codes."""
 from argon2 import PasswordHasher, Type
 from argon2.exceptions import HashingError, InvalidHashError, VerificationError
@@ -39,9 +38,3 @@ def verify_password(encoded_hash, candidate):
         except (TypeError, ValueError):
             return False
     return False
-=======
-"""Compatibility import for the plural password service name used by routes."""
-from services.password import PasswordHashError, hash_password, verify_password
-
-__all__ = ["PasswordHashError", "hash_password", "verify_password"]
->>>>>>> 9edd4d373d835e2d790abb51fbcf5822f120c517

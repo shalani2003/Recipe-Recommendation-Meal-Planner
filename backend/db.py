@@ -93,6 +93,15 @@ CREATE TABLE IF NOT EXISTS ratings (
     stars     INTEGER NOT NULL CHECK (stars BETWEEN 1 AND 5),
     PRIMARY KEY (user_id, recipe_id)
 );
+CREATE TABLE IF NOT EXISTS user_recipe_preferences (
+    user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    recipe_key   TEXT NOT NULL,
+    name         TEXT NOT NULL,
+    ingredients  TEXT NOT NULL DEFAULT '[]',
+    is_favorite  INTEGER NOT NULL DEFAULT 0,
+    stars        INTEGER CHECK (stars BETWEEN 1 AND 5),
+    PRIMARY KEY (user_id, recipe_key)
+);
 CREATE TABLE IF NOT EXISTS shopping_items (
     id                 INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id            INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -149,6 +158,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 # Tables whose rows belong to one user. "Reset all data" clears these (the login stays).
 USER_DATA_TABLES = [
     "pantry_items", "pantry", "dietary", "user_settings", "settings", "favourites", "ratings",
+    "user_recipe_preferences",
     "shopping_items", "meal_plan", "water", "health", "weight_log", "profiles",
 ]
 

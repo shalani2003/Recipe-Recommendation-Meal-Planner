@@ -66,7 +66,7 @@ Profile height, weight, and target weight are also mirrored to `health` for comp
 
 ## Favorites, ratings, and meal plan
 
-All three data sets are scoped to the logged-in user. Recipe records are resolved by name and created in `recipes` when a user saves a favorite, rating, or planned meal that is not already in the catalog.
+All three data sets are scoped to the logged-in user. Favorites and ratings for recipes not in the catalog are stored as user-specific recipe preferences and do not create catalog rows. Planned meals may still create a recipe record when the recipe is not already in the catalog.
 
 | Method | Path | Body | Result |
 |---|---|---|---|
