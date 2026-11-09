@@ -14,13 +14,33 @@ def test_favorites_and_ratings_are_saved_for_the_user(app, user, user2):
     with app.app_context():
         db = get_db()
         user_id = db.execute("SELECT id FROM users WHERE email = ?", ("nimal@example.com",)).fetchone()["id"]
-        assert db.execute("SELECT COUNT(*) FROM favourites WHERE user_id = ?", (user_id,)).fetchone()[0] == 1
-        assert db.execute("SELECT stars FROM ratings WHERE user_id = ?", (user_id,)).fetchone()[0] == 4
+        saved = db.execute(
+            "SELECT is_favorite, stars FROM user_recipe_preferences "
+            "WHERE user_id = ? AND name = ?",
+            (user_id, recipe["name"]),
+        ).fetchone()
+        assert tuple(saved) == (1, 4)
+        assert db.execute(
+            "SELECT COUNT(*) FROM recipes WHERE name = ?", (recipe["name"],)
+        ).fetchone()[0] == 0
 
     assert user.put("/api/ratings", json={**recipe, "stars": 0}).status_code == 200
     assert user.get("/api/ratings").get_json() == {"ratings": {}}
+    with app.app_context():
+        db = get_db()
+        user_id = db.execute("SELECT id FROM users WHERE email = ?", ("nimal@example.com",)).fetchone()["id"]
+        saved = db.execute(
+            "SELECT is_favorite, stars FROM user_recipe_preferences "
+            "WHERE user_id = ? AND name = ?",
+            (user_id, recipe["name"]),
+        ).fetchone()
+        assert tuple(saved) == (1, None)
     assert user.delete("/api/favorites", json=recipe).get_json() == {"ok": True}
     assert user.get("/api/favorites").get_json() == {"favorites": []}
+    with app.app_context():
+        assert get_db().execute(
+            "SELECT COUNT(*) FROM user_recipe_preferences WHERE name = ?", (recipe["name"],)
+        ).fetchone()[0] == 0
 
 
 def test_meal_plan_persists_and_can_be_cleared(app, user):
